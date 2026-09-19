@@ -35,7 +35,7 @@ _karnel_completions() {
   local cur prev words cword
   _init_completion || return
 
-  local commands="agent backup brain cleanup deploy doctor env help ia init install list open pg plugin reinstall restore robin search show start status supabase uninstall update upgrade version voice"
+  local commands="agent backup brain cleanup deploy doctor env help ia init install list open pg plugin reinstall restore robin search show start stats status supabase uninstall update upgrade version voice"
   local modules="ai auto db deploy dev editor games lang network npm osint plugin security shell ui utils voice"
   local install_targets="$modules supabase"
   local update_targets="$modules supabase karnel"

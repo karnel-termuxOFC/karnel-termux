@@ -28,6 +28,7 @@ _karnel_commands() {
     'search:Search tools and memories'
     'show:Show tool documentation'
     'start:Start a service'
+    'stats:System overview with versions, modules, and tool counts'
     'status:Show a quick system overview'
     'supabase:Manage Supabase CLI remote workflows'
     'uninstall:Remove modules and tools'
