@@ -142,6 +142,7 @@ aliases, or options; use `karnel help` and the CLI reference for the full set.
 | `karnel upgrade` | Upgrade the framework (self-update) |
 | `karnel ia` | Manage AI agent sessions, install tools, show launchers |
 | `karnel search <query>` | Search tools and Brain memories |
+| `karnel stats` | System overview: versions, modules, disk usage, tool counts |
 | `karnel status` | System health dashboard (disk, RAM, services, connectivity) |
 | `karnel start editor [port]` | Start code-server (VS Code in browser) |
 | `karnel start robin` | Start Robin OSINT (Tor + web UI) |
@@ -157,6 +158,10 @@ aliases, or options; use `karnel help` and the CLI reference for the full set.
 | `karnel deploy` | Run Vercel, Railway, Netlify, or Supabase CLI commands |
 | `karnel supabase` | Manage the Supabase CLI and remote-project helpers |
 | `karnel robin` | Manage the Robin OSINT service |
+| `karnel backup` | Backup Termux configs and package metadata |
+| `karnel restore` | Restore Termux from a backup |
+| `karnel cleanup` | Clean caches, logs, and temp files |
+| `karnel plugin` | Plugin manager — search, install, enable, disable, config |
 | `karnel --version` | Show installed version |
 
 ### Modules
