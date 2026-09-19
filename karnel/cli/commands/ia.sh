@@ -30,13 +30,7 @@ ia_help() {
 
 # List all AI sessions from known tools
 ia_sessions() {
-	# $1 was historically `--all`; agent names are always shown now, so the
-	# flag is accepted for back-compat and ignored.
-	local show_all="${1:-0}"
-	if [[ "$show_all" == "--all" ]]; then
-		show_all=0
-	fi
-
+	# $1 was historically `--all`; agent names are always shown now.
 	mkdir -p "$IA_SESSIONS_DIR"
 
 	local -a sessions=()

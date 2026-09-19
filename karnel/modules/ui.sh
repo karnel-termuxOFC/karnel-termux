@@ -4,12 +4,7 @@ import "@/utils/log"
 import "@/utils/colors"
 
 TERMUX_DIR="$HOME/.termux"
-TERMUX_ASSETS_DIR="$(dirname "$KARNEL_PATH")/assets"
 LOG_FILE="$KARNEL_CACHE/install_ui.log"
-
-install_ui() {
-	setup_ui
-}
 
 setup_ui() {
 	separator

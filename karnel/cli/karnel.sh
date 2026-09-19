@@ -115,6 +115,7 @@ karnel_help() {
   printf "    ${D_CYAN}%-18s${NC} %s\n" "search <query>" "Search across all tools and memories"
   printf "    ${D_CYAN}%-18s${NC} %s\n" "show <module> [--tool]" "Show README/docs for a tool"
   printf "    ${D_CYAN}%-18s${NC} %s\n" "start [editor,robin]" "Start services (code-server, etc.)"
+  printf "    ${D_CYAN}%-18s${NC} %s\n" "stats" "System overview: modules, tools, disk usage"
   printf "    ${D_CYAN}%-18s${NC} %s\n" "status" "Quick system overview"
   printf "    ${D_CYAN}%-18s${NC} %s\n" "supabase [doctor,types,migrate,link,remote,remote-status,install,uninstall]" "Supabase CLI (types, migrate, functions, secrets)"
   printf "    ${D_CYAN}%-18s${NC} %s\n" "uninstall <module>" "Remove installed modules"
