@@ -19,13 +19,13 @@ install_supercode_cli() {
   log_info "Installing Supercode CLI..."
   local output rc
   output="$(npm install -g supercode-cli 2>&1)"
-  _fix_npm_shebang "supercode-cli" || return 1
   rc=$?
   printf '%s\n' "$output" | tail -3
-  if ((rc != 0)); then
+  if (( rc != 0 )); then
     log_error "Failed to install Supercode CLI"
     return 1
   fi
+  _fix_npm_shebang "supercode-cli" || return 1
   _fix_supercode_shebang || return 1
   log_success "Supercode CLI installed"
   return 0

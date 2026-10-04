@@ -172,6 +172,13 @@ _install_full_module() {
     return 1
     ;;
   esac
+
+  local rc=$?
+  if (( rc == 0 || rc == 2 )); then
+    karnel_mark_module_installed "$target"
+    return 0
+  fi
+  return "$rc"
 }
 
 # Install specific tools within a module
@@ -286,10 +293,13 @@ _install_specific_tools() {
   security)
     _batch_tool_action "security" "install" "${tools[@]}" || return 1
     ;;
+  plugin|voice)
+    _batch_tool_action "$module" "install" "${tools[@]}"
+    return $?
+    ;;
   supabase)
-    import "@/tools/deploy/supabase/install"
-    install_supabase
-    case $? in 0) log_success "Supabase CLI installed";; 2) log_info "Supabase CLI already installed";; *) log_error "Failed to install Supabase CLI"; return 1;; esac
+    _batch_tool_action "supabase" "install" "${tools[@]}"
+    return $?
     ;;
   *)
     log_warn "Unknown install target: $module"

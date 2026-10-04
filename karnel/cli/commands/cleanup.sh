@@ -63,7 +63,8 @@ cleanup_main() {
   fi
 
   # karnel banner cache (regenerate)
-  rm -f "$KARNEL_CACHE/banner_cache" 2>/dev/null
+  # The cache is keyed by terminal width (banner_cache.<cols>).
+  rm -f "$KARNEL_CACHE"/banner_cache* 2>/dev/null
   rm -f "$KARNEL_CACHE/.last_tip_index" 2>/dev/null
 
   echo

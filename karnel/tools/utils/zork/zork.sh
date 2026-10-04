@@ -3,7 +3,7 @@ ZORK_DIR="$HOME/.local/share/karnel-data/zork"
 if [ ! -f "$ZORK_DIR/zork1.dat" ]; then
   mkdir -p "$ZORK_DIR"
   tmpdir="$(mktemp -d "${TMPDIR:-${KARNEL_CACHE:-$HOME/.cache/karnel}}/zork.XXXXXX")" || exit 1
-  if ! curl -fsSL "https://www.infocom-if.org/downloads/zork1.zip" -o "$tmpdir/zork1.zip"; then
+  if ! curl -fsSL "http://www.infocom-if.org/downloads/zork1.zip" -o "$tmpdir/zork1.zip"; then
     echo "Failed to download Zork I" >&2
     rm -rf "$tmpdir"
     exit 1

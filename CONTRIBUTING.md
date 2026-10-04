@@ -181,4 +181,4 @@ bash tests/check-shellcheck.sh
 
 ## Dúvidas
 
-Abra uma issue ou pergunte no [site oficial](https://israelmarques1024-dotcom.github.io/karnel-termux).
+Abra uma issue ou pergunte no [site oficial](https://karneltermux.vercel.app).

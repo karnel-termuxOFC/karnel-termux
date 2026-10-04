@@ -1122,7 +1122,7 @@ brain_skill() {
 	local skill_dir="$base_dir/$skill_name"
 	if [[ -d "$skill_dir" ]]; then
 		log_warn "Skill already exists: $skill_dir"
-		read_confirm "Overwrite?" confirm
+		read_confirm "Overwrite?" confirm n
 		[[ "$confirm" != "y" ]] && return 0
 		rm -rf "$skill_dir"
 	fi
@@ -1294,7 +1294,7 @@ brain_delete() {
 	title=$(_brain_title "$file")
 	echo
 	log_warn "Delete memory: ${D_CYAN}$title${D_NC}?"
-	read_confirm "This cannot be undone" confirm
+	read_confirm "This cannot be undone" confirm n
 	if [[ "$confirm" != "y" ]]; then
 		log_info "Cancelled"
 		return 0
@@ -1344,7 +1344,7 @@ brain_reset() {
 	list_item "Location: ${D_CYAN}$BRAIN_DIR${D_NC}"
 	echo
 
-	read_confirm "Are you sure?" confirm
+	read_confirm "Are you sure?" confirm n
 	if [[ "$confirm" != "y" ]]; then
 		log_info "Cancelled"
 		separator

@@ -53,13 +53,13 @@ exists and the token used by GitHub Actions has write access.
 
 ## Documentation mirror (GitHub Pages)
 
-The documentation mirror is a Jekyll (cayman theme) site built from the `docs/`
-directory and published to GitHub Pages by the `Publish Docs` workflow
-(`.github/workflows/docs.yml`) on every push to `main` that changes `docs/**`.
-The workflow runs `actions/jekyll-build-pages` (from `docs/`, output to
-`docs/_site`), uploads the result as a Pages artifact, and deploys it to the
-`github-pages` environment. The mirror is
-`https://israelmarques1024-dotcom.github.io/karnel-termux/`.
+The documentation source is the `docs/` directory, and the published site is
+the Vercel production site, `https://karneltermux.vercel.app`. The `Publish Docs`
+workflow (`.github/workflows/docs.yml`) runs `actions/jekyll-build-pages` on
+every push to `main` that changes `docs/**`, uploads the result as a Pages
+artifact and deploys it to the `github-pages` environment; that mirror,
+`https://israelmarques1024-dotcom.github.io/karnel-termux/`, is served only
+while GitHub Pages is enabled for the repository.
 
 If a build fails, open the Actions run for the failing job and read the Jekyll
 output: the usual causes are invalid `_config.yml` YAML, an SCSS compile error

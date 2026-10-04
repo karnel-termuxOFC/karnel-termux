@@ -5,9 +5,9 @@ import "@/utils/version"
 import "@/utils/downloaded-python"
 
 LOG_FILE="$KARNEL_CACHE/install_network.log"
-DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/Dark.py"
 
 install_dark() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/Dark.py"
   local TOOL_DIR="$KARNEL_DATA/network/dark"
   local BIN_NAME="dark"
   log_info "Installing Dark Web OSINT (Tor crawler + scraper)..."
@@ -30,6 +30,7 @@ uninstall_dark() {
 }
 
 update_dark() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/Dark.py"
   local TOOL_DIR="$KARNEL_DATA/network/dark"
   local BIN_NAME="dark"
   log_info "Updating Dark Web OSINT..."

@@ -682,11 +682,11 @@ _reinstall_specific_tools() {
   utils)
     _batch_tool_action "utils" "reinstall" "${tools[@]}" || return 1
     ;;
-  security|deploy)
-    _batch_tool_action "$target" "reinstall" "${tools[@]}" || return 1
+  security|deploy|plugin|voice|supabase)
+    _batch_tool_action "$module" "reinstall" "${tools[@]}" || return 1
     ;;
   *)
-    log_warn "Unknown reinstall target: $target"
+    log_warn "Unknown reinstall target: $module"
     echo "Run 'karnel reinstall' to see available targets"
     return 1
     ;;

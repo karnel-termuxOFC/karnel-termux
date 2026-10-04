@@ -8,6 +8,8 @@ fail() {
   exit 1
 }
 
+KARNEL_PATH="$ROOT_DIR/karnel"
+
 import() { :; }
 log_error() { :; }
 log_warn() { :; }
@@ -34,4 +36,27 @@ open_main karnel
 [[ "$opened" == "https://karneltermux.vercel.app/" ]] ||
   fail "overview opened '$opened'"
 
-printf 'Open documentation routes: 3 passed\n'
+for target in doctor brain pg init env backup cleanup osint security plugin voice; do
+  open_main "$target"
+  [[ "$opened" == "https://karneltermux.vercel.app/karnel/$target" ]] ||
+    fail "$target opened '$opened'"
+done
+
+open_main termux
+[[ "$opened" == "https://karneltermux.vercel.app/termux" ]] ||
+  fail "termux opened '$opened'"
+
+# Alias routes still resolve to the page the docs link to.
+open_main robin
+[[ "$opened" == "https://karneltermux.vercel.app/karnel/osint" ]] ||
+  fail "robin opened '$opened'"
+
+open_main herdr
+[[ "$opened" == "https://karneltermux.vercel.app/karnel/utils" ]] ||
+  fail "herdr opened '$opened'"
+
+if open_main definitely-not-a-route >/dev/null 2>&1; then
+  fail "unknown target should fail"
+fi
+
+printf 'Open documentation routes: 19 passed\n'

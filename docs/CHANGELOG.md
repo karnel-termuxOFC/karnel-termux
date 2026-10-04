@@ -6,6 +6,101 @@ layout: base
 
 # Documentation Changelog
 
+## Unreleased
+
+- **CLI correctness:** `karnel search` builds its catalog from tool READMEs in one pass instead of per-directory subshells; `karnel stats` counts modules that actually carry install markers and prints `not installed` instead of empty probes; `karnel open` gained routes for `doctor`, `brain`, `pg`, `init`, `env`, `backup`, `show`, `cleanup`, `supabase`, `linux`, `plugin`, `voice`, `security`, `osint`, `termux`, `termux-api` and `terms`.
+- **Confirmation safety:** `--auto` now takes the safe answer on destructive prompts instead of answering `y`, and the agent declines to run code unless `-y`/`AGENT_YES` says so explicitly; doctor's dangerous fixes require `-t 0` and a non-auto run.
+- **Installer method selection:** menus only list methods that can succeed — AMP Code, Codebuff, MiMo Code and Antigravity CLI no longer offer a proot entry that always failed, and Antigravity's proot install/update refuse before provisioning or mutating a container.
+- **Installer fixes:** Freebuff repairs the npm shebang after a successful install instead of inside the failure branch; Claude Code and OpenCode no longer call a host-only shebang helper inside the Ubuntu container; the doctor markdownlint entry no longer passes a nonexistent `--no-missiglob` flag.
+- **Ownership and stats:** central ownership covers 96 of 166 tools (was 61), modules write install markers on success, and security installers keep their per-package ownership intact.
+- **Packaging:** `pack:check` normalizes modes from the git index on a real filesystem (shared storage masks every mode to 0660), asserts the CLI entry point ships executable, and `npm run release` publishes the validated tarball.
+- **Links and data safety:** Zork downloads over HTTP with pinned SHA-256 digests because the host's TLS does not validate; dead `karnelroute.online` references were dropped and GitHub Pages links now name the Vercel production site as canonical.
+- **Housekeeping:** removed 11 unreferenced `.proot` wrapper templates, `gga/termux.patch`, `cline/helper/cline_helper.c` and `assets/banner/banner.txt`; restored 16 files deleted from the site worktree; `lint:shell` no longer depends on how the suite was invoked.
+
+## 4.17.43
+
+- Added `stats` to the bash and zsh completion catalogs.
+
+## 4.17.42
+
+- **Audit fixes:** `$module` vs `$target` in `reinstall` for full security/deploy reinstalls; games routed through the module layer for consistent headers and error handling; security module gained separator/box/log feedback; `ia.sh` hardcoded paths now respect `KARNEL_DATA`; the default `LOG_FILE` moved off `install_ai.log`; `upgrade` captures the cleanup exit code.
+
+## 4.17.41
+
+- Version references bumped to `4.17.41`.
+
+## 4.17.40
+
+- **Deduplication:** extracted `pkg-tool.sh` (14 security tools) and a `module-lifecycle.sh` factory (4 modules), converting deploy, games, network, utils and 14 pkg-only security installers to them — roughly 700 lines of duplicated boilerplate removed.
+
+## 4.17.39
+
+- **Plugins:** `karnel plugin enable|disable <name>` and `karnel plugin config <name> [key] [value]`; metadata tracks enabled state (default `true`) and a config object; disabled plugins are skipped by command collection and tagged in listings.
+
+## 4.17.38
+
+- **Installer consistency:** 129 `reinstall_*` functions now check the uninstall return code; 13 AI tools gained the Termux shebang repair they were missing.
+
+## 4.17.37
+
+- **Installer bugs:** nine utils tools logged to `install_dev.log` instead of `install_utils.log`; 14 security pkg uninstallers silently ignored failures; the opencode uninstall `sed` pattern mangled unrelated `.bashrc` lines.
+
+## 4.17.36
+
+- **Managed lifecycle:** netlify, vercel, masscan and metasploit installers preserve managed files, and `utils/env.sh` hardened the environment they run in.
+
+## 4.17.35
+
+- **Ownership hardening:** `update.sh` and the amass, burpsuite, ffuf, gobuster and subfinder installers refuse to touch installs Karnel does not own.
+
+## 4.17.34
+
+- **Auto mode:** added non-interactive `--auto` (`read_confirm` gained an auto answer, `agent_actions` participates) with matching completion entries and tests.
+
+## 4.17.33
+
+- **Supply chain:** hardened release downloads across installers.
+
+## 4.17.32
+
+- **Supply chain:** GitHub release asset digests are verified before install.
+
+## 4.17.31
+
+- **Docs:** README synchronized with the current AI catalog.
+
+## 4.17.30
+
+- **10Router:** repaired Termux shebangs on already-installed 10Router CLIs.
+
+## 4.17.29
+
+- **10Router:** added the 10Router AI server CLI to the AI catalog, registry and completions.
+
+## 4.17.28
+
+- **QR Code:** resolved launcher symlinks.
+
+## 4.17.27
+
+- **QR Code:** isolated dependency tests.
+
+## 4.17.26
+
+- **QR Code:** stabilized release validation.
+
+## 4.17.25
+
+- **QR Code:** covered installer dependencies in tests.
+
+## 4.17.24
+
+- **QR Code:** made QR code installation Termux-safe.
+
+## 4.17.23
+
+- **Tool installation:** repaired the Termux tool installation runtime across doctor, AI installers and the npm module.
+
 ## 4.17.22
 
 - **Data safety and correctness (8):** restore rejects ambiguous multiple archives; Brain preserves same-day title collisions, uses file paths for AI context, initializes/pushes `main`, detects missing `origin`, and supports editors with arguments; PostgreSQL backup filenames are path-safe; AI-session persistence escapes JSON correctly.

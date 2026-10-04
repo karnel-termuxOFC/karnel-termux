@@ -39,10 +39,19 @@ _restore_motd() {
 	log_success "Termux MOTD restored"
 }
 
+# Prefer an existing rc file. When neither exists yet, fall back to the
+# config for the shell the user is actually running so the caller never
+# receives an empty path (install/uninstall/doctor all rely on this).
 _detect_shell_config() {
 	if [[ -f "$HOME/.zshrc" ]]; then
 		echo "$HOME/.zshrc"
 	elif [[ -f "$HOME/.bashrc" ]]; then
+		echo "$HOME/.bashrc"
+	elif [[ -f "$HOME/.bash_profile" ]]; then
+		echo "$HOME/.bash_profile"
+	elif [[ "${SHELL##*/}" == "zsh" ]] || { command -v zsh &>/dev/null && [[ ! -f "$HOME/.bashrc" ]]; }; then
+		echo "$HOME/.zshrc"
+	else
 		echo "$HOME/.bashrc"
 	fi
 }

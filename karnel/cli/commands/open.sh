@@ -5,6 +5,46 @@ import "@/utils/colors"
 
 OPEN_DOCS="https://karneltermux.vercel.app"
 
+# Resolves a documented target to its site URL, or prints nothing when the
+# target has no page. Covers every route the site actually publishes plus the
+# aliases users are most likely to type; anything else falls back to the
+# module registry so new modules keep working without touching this file.
+_open_url_for() {
+	local target="$1"
+	case "$target" in
+	# Aliases kept for backwards compatibility with older docs/README hints.
+	herdr) target="utils" ;;
+	robin) target="osint" ;;
+	esac
+
+	# Commands that are not modules but still have a documentation page.
+	case "$target" in
+	doctor | brain | pg | init | env | backup | show | cleanup | supabase | linux | plugin | voice | security | osint)
+		printf '%s/karnel/%s' "$OPEN_DOCS" "$target"
+		return 0
+		;;
+	termux)
+		printf '%s/termux' "$OPEN_DOCS"
+		return 0
+		;;
+	termux-api | api)
+		printf '%s/termux/api' "$OPEN_DOCS"
+		return 0
+		;;
+	terms)
+		printf '%s/terms' "$OPEN_DOCS"
+		return 0
+		;;
+	esac
+
+	# Modules are published one-to-one under /karnel/<module>.
+	if [[ -f "${KARNEL_PATH:-}/modules/$target.sh" ]]; then
+		printf '%s/karnel/%s' "$OPEN_DOCS" "$target"
+		return 0
+	fi
+	return 1
+}
+
 open_main() {
 	if [[ $# -eq 0 ]]; then
 		open_help
@@ -18,26 +58,13 @@ open_main() {
 	karnel | help)
 		url="$OPEN_DOCS/"
 		;;
-	herdr)
-		url="$OPEN_DOCS/karnel/utils"
-		;;
-	robin)
-		url="$OPEN_DOCS/karnel/osint"
-		;;
-	supabase)
-		url="$OPEN_DOCS/karnel/supabase"
-		;;
-	cleanup)
-		url="$OPEN_DOCS/karnel/cleanup"
-		;;
 	--help | -h)
 		open_help
 		return
 		;;
 	*)
-		if [[ -f "$KARNEL_PATH/modules/$target.sh" ]]; then
-			url="$OPEN_DOCS/karnel/$target"
-		else
+		url="$(_open_url_for "$target")"
+		if [[ -z "$url" ]]; then
 			log_error "Unknown target: $target"
 			echo
 			open_help
@@ -102,6 +129,14 @@ open_help() {
 	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "plugin" "Plugin system"
 	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "security" "Security tools"
 	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "herdr" "Herdr terminal AI assistant"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "doctor" "Diagnostics & auto-fix"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "brain" "Second Brain memories"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "pg" "PostgreSQL helpers"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "backup" "Backup & restore"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "init" "Project scaffolding"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "env" "Environment variables"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "termux" "Termux setup guide"
+	printf "    ${D_GREEN}%-14s${NC} ${D_DIM}%s${NC}\n" "linux" "Linux stack guide"
 	echo
 	separator_section "Website"
 	echo

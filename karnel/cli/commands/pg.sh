@@ -325,7 +325,7 @@ pg_drop() {
 
 	log_warn "This will permanently delete database: $db_name"
 
-	read_confirm "Are you sure?" CONFIRM
+	read_confirm "Are you sure?" CONFIRM n
 	if [[ "$CONFIRM" != "y" ]]; then
 		log_warn "Operation cancelled"
 		return 0
@@ -629,7 +629,7 @@ pg_restore_db() {
 
 	local success=false
 	local pg_confirm
-	read_confirm "Restore will clean ($db_name) and replace all objects. Continue?" pg_confirm
+	read_confirm "Restore will clean ($db_name) and replace all objects. Continue?" pg_confirm n
 	if [[ "$pg_confirm" != "y" ]]; then
 		log_info "Restore cancelled"
 		return 0

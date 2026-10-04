@@ -5,7 +5,6 @@ import "@/utils/version"
 import "@/utils/downloaded-python"
 
 LOG_FILE="$KARNEL_CACHE/install_utils.log"
-DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/QR%20Code%20Generator.py"
 
 _qrcode_dependencies() {
   if ! command -v python3 &>/dev/null && ! pkg install python -y &>>"$LOG_FILE"; then
@@ -21,6 +20,7 @@ _qrcode_dependencies() {
 }
 
 install_qrcode() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/QR%20Code%20Generator.py"
   local TOOL_DIR="$KARNEL_DATA/utils/qrcode"
   local BIN_NAME="qrcode"
   log_info "Installing QR Code Generator..."
@@ -41,6 +41,7 @@ uninstall_qrcode() {
 }
 
 update_qrcode() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/QR%20Code%20Generator.py"
   local TOOL_DIR="$KARNEL_DATA/utils/qrcode"
   local BIN_NAME="qrcode"
   log_info "Updating QR Code Generator..."

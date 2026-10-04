@@ -19,6 +19,7 @@
     "lint:shell": "bash tests/check-shellcheck.sh",
     "test": "bash tests/run-isolated.sh",
     "pack:check": "node scripts/check-package.js",
+    "release": "node scripts/publish.js",
     "ci": "npm run lint:shell && npm test && npm run pack:check",
     "postinstall": "node scripts/npm-install.js"
   },

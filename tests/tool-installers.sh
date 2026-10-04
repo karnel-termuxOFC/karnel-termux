@@ -7,6 +7,8 @@ trap 'rm -rf "$TEST_ROOT"' EXIT
 SYSTEM_RM=$(command -v rm)
 SYSTEM_CHMOD=$(command -v chmod)
 SYSTEM_GREP=$(command -v grep)
+SYSTEM_HEAD=$(command -v head)
+SYSTEM_SED=$(command -v sed)
 
 pass=0
 failed=0
@@ -35,6 +37,8 @@ assert_keelcode_lifecycle() (
   log_error() { :; }
   log_error() { :; }
   tail() { :; }
+  head() { "$SYSTEM_HEAD" "$@"; }
+  sed() { "$SYSTEM_SED" "$@"; }
   grep() { "$SYSTEM_GREP" "$@"; }
   rm() { "$SYSTEM_RM" "$@"; }
   npm() {
@@ -44,6 +48,8 @@ assert_keelcode_lifecycle() (
     update) : ;;
     esac
   }
+  # shellcheck source=../karnel/utils/npm-shebang.sh
+  source "$ROOT_DIR/karnel/utils/npm-shebang.sh"
   # shellcheck source=../karnel/tools/ai/keelcode/install.sh
   source "$ROOT_DIR/karnel/tools/ai/keelcode/install.sh"
   _keelcode_install_termux_wrapper() { :; }

@@ -30,8 +30,14 @@ bash tests/uninstall.sh
 bash tests/robin.sh
 bash tests/plugins.sh
 bash tests/tool-installers.sh
+bash tests/installer-handlers.sh
+bash tests/installer-globals.sh
 bash tests/bun-installer.sh
 bash tests/downloaded-python-installers.sh
 bash tests/installer-data-safety.sh
 bash tests/security-temp-installers.sh
 bash tests/security-uninstall-ownership.sh
+bash tests/ownership-coverage.sh
+bash tests/registry-coverage.sh
+bash tests/list-coverage.sh
+bash tests/banner.sh

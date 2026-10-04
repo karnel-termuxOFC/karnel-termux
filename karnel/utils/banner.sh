@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=all
 # Note: deliberately NOT using set -e here — it leaks errexit to the parent
 # shell, causing non-existent commands to exit zsh with code 127.
 
@@ -7,6 +6,44 @@ ESC=$(printf '\033')
 BOLD="${ESC}[1m"
 DIM="${ESC}[2m"
 NC="${ESC}[0m"
+
+# The banner is sourced directly from shell startup files, so the CLI has not
+# computed KARNEL_VERSION yet. Resolve it once from package.json.
+if [[ -z "${KARNEL_VERSION:-}" ]]; then
+  _karnel_banner_src=""
+  if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    _karnel_banner_src="${BASH_SOURCE[0]}"
+  elif [[ -n "${ZSH_VERSION:-}" ]]; then
+    # `${(%):-%x}` is zsh syntax. It sits behind eval so bash can parse this
+    # file at all; it is only ever expanded while ZSH_VERSION is set, and a
+    # failed expansion just falls through to the default version below.
+    _karnel_banner_src=$(eval 'printf %s "${(%):-%x}"' 2>/dev/null || true)
+  fi
+  if [[ -n "$_karnel_banner_src" ]]; then
+    # banner.sh lives at karnel/utils/, package.json is two levels up.
+    _karnel_pkg="$(dirname "$_karnel_banner_src")/../../package.json"
+    if [[ -f "$_karnel_pkg" ]]; then
+      KARNEL_VERSION=$(grep -m1 '"version"' "$_karnel_pkg" 2>/dev/null |
+        sed -E 's/.*"version": *"([^"]+)".*/\1/')
+    fi
+    unset _karnel_pkg
+  fi
+  unset _karnel_banner_src
+fi
+: "${KARNEL_VERSION:=4.x}"
+
+# Column width, guarding against an unset/invalid COLUMNS or a missing tput.
+_banner_cols() {
+  local cols="${COLUMNS:-}"
+  [[ "$cols" =~ ^[0-9]+$ ]] || cols=$(tput cols 2>/dev/null || true)
+  [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+  printf '%s' "$cols"
+}
+
+# Every colour/index table below is associative. Bash arrays are 0-indexed while
+# zsh arrays are 1-indexed, so indexed arrays would shift every colour by one
+# (and index 0 would be empty) when the banner is sourced from .zshrc.
+
 # TrueColor helper (original gradient: red → purple → blue → black)
 tc() { printf '%s[38;2;%d;%d;%dm' "$ESC" "$1" "$2" "$3"; }
 
@@ -14,7 +51,7 @@ WHITE=$(tc 255 255 255)
 GRAY="${ESC}[0;90m"
 
 # TP gradient: cyan → blue → purple → magenta (muted, original style)
-TP=()
+declare -A TP=()
 for i in $(seq 0 15); do
   if   (( i < 4 )); then
     r=$(( 0 + i * 16 )); g=$(( 200 + i * 14 )); b=$(( 255 - i * 10 ))
@@ -27,8 +64,9 @@ for i in $(seq 0 15); do
   fi
   (( r > 255 )) && r=255; (( g > 255 )) && g=255; (( b > 255 )) && b=255
   (( r < 0 )) && r=0; (( g < 0 )) && g=0; (( b < 0 )) && b=0
-  TP+=("$(tc "$r" "$g" "$b")")
+  TP[$i]="$(tc "$r" "$g" "$b")"
 done
+unset i r g b
 
 CYAN="${TP[0]}"
 BLUE="${TP[4]}"
@@ -49,7 +87,7 @@ C11="${TP[11]}"
 C13="${TP[13]}"
 
 # RK gradient: red → purple → blue → black (original)
-RK=()
+declare -A RK=()
 for _i in $(seq 0 15); do
   if (( _i < 6 )); then
     _r=$(( 255 - _i * 10 ))
@@ -65,7 +103,7 @@ for _i in $(seq 0 15); do
     _b=$(( 133 - (_i-11) * 26 ))
   fi
   (( _r < 0 )) && _r=0; (( _g < 0 )) && _g=0; (( _b < 0 )) && _b=0
-  RK+=("$(tc "$_r" "$_g" "$_b")")
+  RK[$_i]="$(tc "$_r" "$_g" "$_b")"
 done
 unset _i _r _g _b
 
@@ -82,6 +120,9 @@ _center() {
   local text="$1" width="$2"
   local vis; vis=$(_ansi_len "$text")
   local total=$(( width - vis ))
+  # A line wider than the box would otherwise pass a negative width to printf,
+  # which silently prints abs(width) extra spaces and pushes the border out.
+  (( total < 0 )) && total=0
   local left=$(( total / 2 ))
   local right=$(( total - left ))
   printf '%*s' "$left" ''
@@ -102,18 +143,33 @@ _repeat() {
 # ================================================================
 FIGLET_TEXT=""
 TERMUX_FIGLET_TEXT=""
-FIGLET_LINES=()
-TERMUX_FIGLET_LINES=()
+declare -A FIGLET_LINES=()
+declare -A TERMUX_FIGLET_LINES=()
 if command -v figlet &>/dev/null; then
   FIGLET_TEXT=$(figlet -f big "KARNEL" 2>/dev/null || true)
   TERMUX_FIGLET_TEXT=$(figlet -f big "TERMUX" 2>/dev/null || true)
 fi
 if [[ -n "$FIGLET_TEXT" ]]; then
-  while IFS= read -r _fl; do FIGLET_LINES+=("$_fl"); done <<< "$FIGLET_TEXT"
+  # `<<<` appends a newline, so drop trailing newlines first or the split below
+  # yields a phantom empty line (which renders as a blank row in the box).
+  while [[ "$FIGLET_TEXT" == *$'\n' ]]; do FIGLET_TEXT="${FIGLET_TEXT%$'\n'}"; done
+  _fl_i=0
+  while IFS= read -r _fl; do
+    FIGLET_LINES[$_fl_i]="$_fl"
+    _fl_i=$((_fl_i + 1))
+  done <<< "$FIGLET_TEXT"
+  unset _fl_i
 fi
 if [[ -n "$TERMUX_FIGLET_TEXT" ]]; then
-  while IFS= read -r _tl; do TERMUX_FIGLET_LINES+=("$_tl"); done <<< "$TERMUX_FIGLET_TEXT"
+  while [[ "$TERMUX_FIGLET_TEXT" == *$'\n' ]]; do TERMUX_FIGLET_TEXT="${TERMUX_FIGLET_TEXT%$'\n'}"; done
+  _tl_i=0
+  while IFS= read -r _tl; do
+    TERMUX_FIGLET_LINES[$_tl_i]="$_tl"
+    _tl_i=$((_tl_i + 1))
+  done <<< "$TERMUX_FIGLET_TEXT"
+  unset _tl_i
 fi
+unset _fl _tl
 
 # ================================================================
 # Metallic shine — passes over the big figlet letters only
@@ -171,7 +227,7 @@ _metallic_apply() {
 # ================================================================
 _render_frame_line() {
   local _which="$1"
-  local cols="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+  local cols; cols=$(_banner_cols)
   local W=$(( cols > 72 ? 68 : cols - 6 ))
   (( W < 40 )) && W=40
   local GAP_L=$(( (cols - W - 2) / 2 ))
@@ -217,7 +273,7 @@ _render_frame_line() {
 # Render
 # ================================================================
 _render_top() {
-  local cols="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+  local cols; cols=$(_banner_cols)
   local W=$(( cols > 72 ? 68 : cols - 6 ))
   (( W < 40 )) && W=40
   local GAP_L=$(( (cols - W - 2) / 2 ))
@@ -236,7 +292,7 @@ _render_top() {
 }
 
 _render_text_logo() {
-  local cols="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+  local cols; cols=$(_banner_cols)
   local W=$(( cols > 72 ? 68 : cols - 6 ))
   (( W < 40 )) && W=40
   local GAP_L=$(( (cols - W - 2) / 2 ))
@@ -246,20 +302,24 @@ _render_text_logo() {
   local pad_l; pad_l=$(printf '%*s' "$GAP_L" '')
   local pad_r; pad_r=$(printf '%*s' "$GAP_R" '')
   local title="KARNEL   TERMUX"
-  local ver_line="v${KARNEL_VERSION:-4.x}"
+  local ver_line="v${KARNEL_VERSION}"
   local subtitle="by israel marques"
-  echo "${pad_l}${TP[0]}╭$(printf '%*s' $((W+2)) '' | tr ' ' '─')╮${pad_r}"
-  echo "${pad_l}${TP[0]}│${NC}$(printf '%*s' $W '' | tr ' ' ' ')${TP[15]}│${pad_r}"
-  echo "${pad_l}${TP[0]}│${NC}$(printf '%*s' $(((W-${#title})/2)) '')${TP[7]}${title}${NC}$(printf '%*s' $(((W-${#title}+1)/2)) '')${TP[15]}│${pad_r}"
-  echo "${pad_l}${TP[0]}│${NC}$(printf '%*s' $W '' | tr ' ' ' ')${TP[15]}│${pad_r}"
-  echo "${pad_l}${TP[0]}│${NC}$(printf '%*s' $(((W-${#ver_line})/2)) '')${GRAY}${ver_line}${NC}$(printf '%*s' $(((W-${#ver_line}+1)/2)) '')${TP[15]}│${pad_r}"
-  echo "${pad_l}${TP[0]}│${NC}$(printf '%*s' $(((W-${#subtitle})/2)) '')${DIM}${subtitle}${NC}$(printf '%*s' $(((W-${#subtitle}+1)/2)) '')${TP[15]}│${pad_r}"
-  echo "${pad_l}${TP[0]}╰$(printf '%*s' $((W+2)) '' | tr ' ' '─')╯${pad_r}"
+  local sp_line; sp_line=$(printf '%*s' "$W" '')
+  # `tr ' ' '─'` maps byte-wise and produced invalid UTF-8 here, and used W+2
+  # cells where the box sides are W — both rendered as mojibake/overrun.
+  local edge; edge=$(_repeat "─" "$W")
+  echo "${pad_l}${TP[0]}╭${edge}╮${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}│${NC}${sp_line}${TP[15]}│${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}│${NC}$(_center "${TP[7]}${title}${NC}" "$W")${TP[15]}│${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}│${NC}${sp_line}${TP[15]}│${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}│${NC}$(_center "${GRAY}${ver_line}${NC}" "$W")${TP[15]}│${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}│${NC}$(_center "${DIM}${subtitle}${NC}" "$W")${TP[15]}│${NC}${pad_r}"
+  echo "${pad_l}${TP[0]}╰${edge}╯${NC}${pad_r}"
 }
 
 _render_figlet() {
   local _anim_off="${1:-0}" _slow="${2:-}"
-  local cols="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+  local cols; cols=$(_banner_cols)
   local W=$(( cols > 72 ? 68 : cols - 6 ))
   (( W < 40 )) && W=40
   local GAP_L=$(( (cols - W - 2) / 2 ))
@@ -301,7 +361,7 @@ _render_figlet() {
 }
 
 _render_bottom() {
-  local cols="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+  local cols; cols=$(_banner_cols)
   local W=$(( cols > 72 ? 68 : cols - 6 ))
   (( W < 40 )) && W=40
   local GAP_L=$(( (cols - W - 2) / 2 ))
@@ -364,15 +424,27 @@ _render() {
 
 _show_tip() {
   local _tip_index_file="${XDG_CACHE_HOME:-$HOME/.cache}/karnel/.last_tip_index"
-  if [[ ${#KARNEL_TIPS[@]} -gt 0 ]]; then
-    local last_index=-1 new_index _tip
-    [[ -f "$_tip_index_file" ]] && last_index=$(cat "$_tip_index_file" 2>/dev/null || echo "-1")
-    new_index=$last_index
-    while [[ "$new_index" == "$last_index" ]]; do new_index=$(( RANDOM % ${#KARNEL_TIPS[@]} )); done
-    echo "$new_index" >"$_tip_index_file"
-    _tip="${KARNEL_TIPS[$new_index]:-}"
-    [[ -n "$_tip" ]] && echo -e "\n ${TP[3]}●${NC} ${GRAY}Tip${NC} $_tip"
+  local _tip_count=${#KARNEL_TIPS[@]}
+  (( _tip_count > 0 )) || return 0
+
+  local last_index=-1 new_index _tip _attempt=0
+  if [[ -f "$_tip_index_file" ]]; then
+    last_index=$(cat "$_tip_index_file" 2>/dev/null)
+    [[ "$last_index" =~ ^[0-9]+$ ]] || last_index=-1
   fi
+
+  # Bounded retry: a single-tip table (or an unlucky RANDOM) used to spin here.
+  while :; do
+    new_index=$(( RANDOM % _tip_count ))
+    [[ "$new_index" != "$last_index" ]] && break
+    _attempt=$((_attempt + 1))
+    (( _attempt > 50 )) && break
+  done
+
+  printf '%s\n' "$new_index" >"$_tip_index_file" 2>/dev/null
+  _tip="${KARNEL_TIPS[$new_index]:-}"
+  [[ -n "$_tip" ]] && printf '\n %s●%s %sTip%s %s\n' "${TP[3]}" "$NC" "$GRAY" "$NC" "$_tip"
+  return 0
 }
 
 _render_animated() {
@@ -382,17 +454,21 @@ _render_animated() {
   _show_tip
 }
 
-# Cache banner for clear() override (capture only, no terminal output)
+# Cache banner for clear() override (capture only, no terminal output).
+# The key includes the terminal width: a cache rendered at 80 columns looked
+# broken the moment the terminal was resized, because clear() replays it as-is.
+_banner_cols_now=$(_banner_cols)
 _banner_output=$(_render 2>/dev/null) || true
-_karnel_banner_cache="${XDG_CACHE_HOME:-$HOME/.cache}/karnel/banner_cache"
+_karnel_banner_cache="${XDG_CACHE_HOME:-$HOME/.cache}/karnel/banner_cache.${_banner_cols_now}"
 mkdir -p "$(dirname "$_karnel_banner_cache")" 2>/dev/null
 if [[ -t 1 ]] && [[ -n "$_banner_output" ]]; then
-  echo "$_banner_output" > "$_karnel_banner_cache" 2>/dev/null
+  printf '%s\n' "$_banner_output" > "$_karnel_banner_cache" 2>/dev/null
 fi
+unset _banner_cols_now
 
 banner_tip() { echo " ${TP[3]}●${NC} ${GRAY}Tip${NC} $*"; }
 
-KARNEL_TIPS=(
+_karnel_tip_list=(
   "Keep Karnel updated: ${TP[3]}karnel update karnel${NC}"
   "Check your version: ${TP[3]}karnel --version${NC}"
   "Enable debug logs: ${TP[3]}export KARNEL_DEBUG=1${NC}"
@@ -466,6 +542,16 @@ KARNEL_TIPS=(
   "israel marques 🇧🇷 — author of Karnel Termux"
 )
 
+# Re-keyed into an associative table so the random pick below works in both
+# shells (a 0-based pick on a 1-based zsh array resolves to an empty tip).
+declare -A KARNEL_TIPS=()
+_tip_i=0
+for _tip_entry in "${_karnel_tip_list[@]}"; do
+  KARNEL_TIPS[$_tip_i]="$_tip_entry"
+  _tip_i=$((_tip_i + 1))
+done
+unset _karnel_tip_list _tip_i _tip_entry
+
 _block_input() {
   _OLD_STTY=$(stty -g 2>/dev/null || true)
   stty -echo -icanon min 0 time 0 2>/dev/null || true
@@ -477,10 +563,17 @@ _unblock_input() {
 
 # Exportado para ser chamado pelo karnel.sh quando necessário
 render_banner() {
+  local _saved_traps _trap_line
+  # Snapshot the caller's traps. Clearing EXIT/INT/TERM unconditionally used to
+  # wipe whatever the shell rc (or a plugin) had installed before us.
+  _saved_traps=$(trap 2>/dev/null)
   _block_input
   trap '_unblock_input' EXIT INT TERM
   _render_animated
   _unblock_input
-  trap - EXIT INT TERM
+  trap - EXIT INT TERM 2>/dev/null || true
+  while IFS= read -r _trap_line; do
+    [[ -n "$_trap_line" ]] && eval "$_trap_line"
+  done <<< "$_saved_traps"
   echo
 }

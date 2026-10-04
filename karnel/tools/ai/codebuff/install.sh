@@ -235,23 +235,9 @@ install_codebuff() {
 
   log_info "Installing Codebuff..."
 
-  if [[ -t 0 ]] && [[ -t 1 ]]; then
-    log_info "Select installation method for Codebuff:"
-    read_select "Installation method" SELECTED_METHOD \
-      "Native (recommended) - Compile with glibc support" \
-      "Proot-distro (alternative) - Ubuntu container"
-
-    case "$SELECTED_METHOD" in
-    *Native*)
-      _install_codebuff_native
-      ;;
-    *Proot-distro*)
-      _install_codebuff_proot
-      ;;
-    esac
-  else
-    _install_codebuff_native
-  fi
+  # Only methods that can succeed are offered: upstream publishes no proot
+  # installer, so a second entry here would be a prompt that always fails.
+  _install_codebuff_native
 }
 
 uninstall_codebuff() {

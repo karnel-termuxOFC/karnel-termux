@@ -185,14 +185,9 @@ install_ampcode() {
     log_error "Refusing to replace an existing AMP Code wrapper not owned by Karnel"
     return 1
   fi
-  log_info "Select installation method for AMP Code CLI:"
-  read_select "Installation method" SELECTED_METHOD \
-    "Native (recommended) - Compile with glibc support" \
-    "Proot-distro (alternative) - Ubuntu container"
-  case "$SELECTED_METHOD" in
-  *Native*) _install_amp_native ;;
-  *Proot-distro*) _install_amp_proot ;;
-  esac
+  # Only methods that can succeed are offered: AMP Code ships no proot build,
+  # so a second entry here would be a prompt that always fails.
+  _install_amp_native
 }
 
 uninstall_ampcode() {

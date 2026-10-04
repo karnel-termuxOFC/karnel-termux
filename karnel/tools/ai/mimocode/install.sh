@@ -170,20 +170,9 @@ install_mimocode() {
     return 1
   fi
 
-  log_info "Select installation method for mimocode:"
-
-  read_select "Installation method" SELECTED_METHOD \
-    "Native (recommended) - Compile with glibc support" \
-    "Proot-distro (unavailable: upstream has no verifiable artifact)"
-
-  case "$SELECTED_METHOD" in
-  *Native*)
-    _install_mimocode_native
-    ;;
-  *Proot-distro*)
-    _install_mimocode_proot
-    ;;
-  esac
+  # Only methods that can succeed are offered: upstream publishes no proot
+  # contract, so a second entry here would be a prompt that always fails.
+  _install_mimocode_native
 }
 
 uninstall_mimocode() {

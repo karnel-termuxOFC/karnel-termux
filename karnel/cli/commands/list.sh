@@ -79,7 +79,7 @@ list_main() {
     utils)
       _list_utils
       ;;
-    plugin)
+    plugin | plugins)
       import "@/tools/plugins/install"
       echo "Installed Plugins:"
       _list_plugins
@@ -105,10 +105,12 @@ _list_deploy() {
   echo
   box "Deploy CLIs"
   echo
-  printf "    ${D_GREEN}%-18s${NC} %s\n" "vercel" "Frontend & serverless deployment"
-  printf "    ${D_GREEN}%-18s${NC} %s\n" "railway" "Full-stack with databases"
-  printf "    ${D_GREEN}%-18s${NC} %s\n" "netlify" "Static sites & edge functions"
-  printf "    ${D_GREEN}%-18s${NC} %s\n" "supabase" "PostgreSQL, Edge Functions, types, migrations"
+  table_start "Tool" "Install Flag" "Command" "Status"
+  table_row "Vercel CLI" "--vercel" "vercel" "$(_check_cmd "vercel")"
+  table_row "Railway CLI" "--railway" "railway" "$(_check_cmd "railway")"
+  table_row "Netlify CLI" "--netlify" "netlify" "$(_check_cmd "netlify")"
+  table_row "Supabase CLI" "--supabase" "supabase" "$(_check_cmd "supabase")"
+  table_end
   echo
   list_item "Usage: ${D_CYAN}karnel install deploy${NC} to install all"
   list_item "Usage: ${D_CYAN}karnel install deploy --vercel${NC} for specific"
@@ -182,7 +184,7 @@ _list_ai() {
   table_row "Ollama" "--ollama" "ollama" "$(_check_pkg "ollama")"
   table_row "Codex CLI" "--codex" "codex" "$(_check_cmd "codex")"
   table_row "OpenCode" "--opencode" "opencode" "$(_check_cmd "opencode")"
-  table_row "MiMoCode" "--mimocode" "mimo" "$(_check_cmd "mimo")"
+  table_row "MiMo Code" "--mimocode" "mimo" "$(_check_cmd "mimo")"
   table_row "Engram" "--engram" "engram" "$(_check_cmd "engram")"
   table_row "CodeGraph" "--codegraph" "codegraph" "$(_check_cmd "codegraph")"
   table_row "Pi Coding Agent" "--pi" "pi" "$(_check_cmd "pi")"
@@ -203,7 +205,7 @@ _list_ai() {
   table_row "Kimchi CLI" "--kimchi-code" "kimchi" "$(_check_cmd "kimchi")"
   table_row "omniRoute" "--omni-route" "omni-route" "$(_check_omni_route)"
   table_row "Context7 Docs" "--ctx7" "ctx7" "$(_check_cmd "ctx7")"
-  table_row "OpenSpec SDD" "--openspec" "openspec" "$(_check_cmd "openspec")"
+  table_row "OpenSpec SDD Framework" "--openspec" "openspec" "$(_check_cmd "openspec")"
   table_row "Qoder" "--qoder" "qodercli" "$(_check_cmd "qodercli")"
   table_row "AMP Code CLI" "--ampcode" "amp" "$(_check_cmd "amp")"
   table_row "Cursor CLI" "--cursor-cli" "cursor,cursor-agent" "$(_check_cmd_any "cursor,cursor-agent")"
@@ -212,7 +214,7 @@ _list_ai() {
   table_row "Factory Droid" "--droid" "droid" "$(_check_cmd "droid")"
   table_row "Cactus" "--cactus" "cactus" "$(_check_cmd "cactus")"
   table_row "Cactus Needle" "--cactus-needle" "needle" "$(_check_cmd "needle")"
-  table_row "Walkie" "--walkie" "walkie" "$(_check_cmd "walkie")"
+  table_row "Walkie Agent" "--walkie" "walkie" "$(_check_cmd "walkie")"
   table_row "Hugging Face" "--hugging-face" "hf" "$(_check_cmd "hf")"
   table_row "Copilot-Termux" "--copilot-termux" "copilot" "$(_check_cmd "copilot")"
   table_row "Supercode CLI" "--supercode-cli" "supercode" "$(_check_cmd "supercode")"
@@ -552,7 +554,8 @@ _check_cursor() {
 
   # Check if extra-keys are configured by karnel
 _check_extra_keys() {
-  if grep -qF "terminal-cursor-blink-rate=500" "$HOME/.termux/termux.properties" 2>/dev/null; then
+  if grep -qF "# Karnel extra-keys begin" "$HOME/.termux/termux.properties" 2>/dev/null &&
+    grep -qF "extra-keys = " "$HOME/.termux/termux.properties" 2>/dev/null; then
     echo -e "${D_GREEN}installed${NC}"
   else
     echo -e "${D_RED}not installed${NC}"
@@ -633,7 +636,9 @@ _list_voice() {
   echo
   box "Voice Command"
   echo
-  printf "    ${D_GREEN}%-18s${NC} %s\n" "voice" "Speech-to-agent AI command"
+  table_start "Component" "Install Flag" "Status"
+  table_row "Voice Command" "voice" "built-in"
+  table_end
   echo
   list_item "Usage: ${D_CYAN}karnel install voice${NC}"
   echo

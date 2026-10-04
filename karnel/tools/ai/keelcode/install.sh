@@ -188,13 +188,13 @@ install_keelcode() {
   log_info "Installing KeelCode..."
   local output rc
   output="$(npm install -g "$KEELCODE_PACKAGE" --force 2>&1)"
-  _fix_npm_shebang "keelcode" || return 1
   rc=$?
   printf '%s\n' "$output" | tail -3
-  if ((rc != 0)); then
+  if (( rc != 0 )); then
     log_error "Failed to install KeelCode"
     return 1
   fi
+  _fix_npm_shebang "keelcode" || return 1
   if ! command -v keelcode &>/dev/null; then
     log_error "KeelCode binary was not found after npm installation"
     return 1

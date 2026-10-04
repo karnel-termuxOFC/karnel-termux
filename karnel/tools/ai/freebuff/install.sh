@@ -19,10 +19,10 @@ install_freebuff() {
 
   log_info "Installing Freebuff..."
   npm install -g freebuff || {
-  _fix_npm_shebang "freebuff" || return 1
     log_error "Failed to install Freebuff"
     return 1
   }
+  _fix_npm_shebang "freebuff" || return 1
   _fix_freebuff_shebang || return 1
   log_success "Freebuff installed"
 }

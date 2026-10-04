@@ -6,7 +6,7 @@ import "@/utils/version"
 import "@/utils/uninstall"
 
 LOG_FILE="$KARNEL_CACHE/install_ai.log"
-CACTUS_DATA_DIR="$HOME/.local/share/karnel-data/cactus-needle"
+CACTUS_NEEDLE_DATA_DIR="$HOME/.local/share/karnel-data/cactus-needle"
 CACTUS_GLIBC_PYTHON="$PREFIX/glibc/bin/python"
 
 _cactus_detect_ubuntu_root() {
@@ -125,8 +125,8 @@ _cactus_install_native() {
   _cactus_verify_glibc || return 1
   loading "Creating wrapper" _cactus_create_glibc_wrapper || return 1
 
-  mkdir -p "$CACTUS_DATA_DIR"
-  printf 'native' >"$CACTUS_DATA_DIR/.install-method"
+  mkdir -p "$CACTUS_NEEDLE_DATA_DIR"
+  printf 'native' >"$CACTUS_NEEDLE_DATA_DIR/.install-method"
   log_success "Cactus Needle installed natively"
   return 0
 }
@@ -159,8 +159,8 @@ _cactus_install_proot_glibc() {
   _cactus_verify_glibc || return 1
   loading "Creating proot wrapper" _cactus_create_proot_wrapper || return 1
 
-  mkdir -p "$CACTUS_DATA_DIR"
-  printf 'proot-glibc' >"$CACTUS_DATA_DIR/.install-method"
+  mkdir -p "$CACTUS_NEEDLE_DATA_DIR"
+  printf 'proot-glibc' >"$CACTUS_NEEDLE_DATA_DIR/.install-method"
   log_success "Cactus Needle installed with glibc + proot"
   return 0
 }
@@ -247,8 +247,8 @@ _install_cactus_proot() {
   loading "Verifying Cactus Needle" _cactus_ubuntu_verify_impl || return 1
   loading "Creating wrapper" _cactus_create_ubuntu_wrapper || return 1
 
-  mkdir -p "$CACTUS_DATA_DIR"
-  printf 'proot' >"$CACTUS_DATA_DIR/.install-method"
+  mkdir -p "$CACTUS_NEEDLE_DATA_DIR"
+  printf 'proot' >"$CACTUS_NEEDLE_DATA_DIR/.install-method"
   log_success "Cactus Needle installed (proot-distro)"
   return 0
 }
@@ -299,29 +299,29 @@ uninstall_cactus_needle() {
 
 _uninstall_cactus_needle_impl() {
   local method="native"
-  if [ -f "$CACTUS_DATA_DIR/.install-method" ]; then
-    method="$(cat "$CACTUS_DATA_DIR/.install-method")"
+  if [ -f "$CACTUS_NEEDLE_DATA_DIR/.install-method" ]; then
+    method="$(cat "$CACTUS_NEEDLE_DATA_DIR/.install-method")"
   fi
 
   if [ "$method" = "proot" ]; then
     _cactus_proot_ubuntu python3 -m pip uninstall -y cactus-needle &>>"$LOG_FILE"
     rm -f "$PREFIX/bin/needle"
-    rm -rf "$CACTUS_DATA_DIR"
+    rm -rf "$CACTUS_NEEDLE_DATA_DIR"
     log_success "Cactus Needle (proot-distro) uninstalled"
     return 0
   fi
 
   _cactus_glibc_run -m pip uninstall -y cactus-needle &>>"$LOG_FILE"
   rm -f "$PREFIX/bin/needle"
-  rm -rf "$CACTUS_DATA_DIR"
+  rm -rf "$CACTUS_NEEDLE_DATA_DIR"
   log_success "Cactus Needle ($method) uninstalled"
   return 0
 }
 
 _cactus_installed_version() {
   local method="native"
-  if [ -f "$CACTUS_DATA_DIR/.install-method" ]; then
-    method="$(cat "$CACTUS_DATA_DIR/.install-method")"
+  if [ -f "$CACTUS_NEEDLE_DATA_DIR/.install-method" ]; then
+    method="$(cat "$CACTUS_NEEDLE_DATA_DIR/.install-method")"
   fi
 
   if [ "$method" = "proot" ]; then
@@ -342,8 +342,8 @@ _update_cactus_needle() {
 
 _update_cactus_needle_impl() {
   local method="native"
-  if [ -f "$CACTUS_DATA_DIR/.install-method" ]; then
-    method="$(cat "$CACTUS_DATA_DIR/.install-method")"
+  if [ -f "$CACTUS_NEEDLE_DATA_DIR/.install-method" ]; then
+    method="$(cat "$CACTUS_NEEDLE_DATA_DIR/.install-method")"
   fi
 
   if [ "$method" = "proot" ]; then

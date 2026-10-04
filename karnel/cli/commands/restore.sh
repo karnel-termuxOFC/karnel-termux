@@ -135,7 +135,7 @@ restore_main() {
 
   local confirm=""
   echo
-  read_confirm "Proceed with restore?" confirm
+  read_confirm "Proceed with restore?" confirm n
   [[ "$confirm" != "y" ]] && { rm -rf "$tmp"; log_info "Cancelled"; return 0; }
 
   transaction=$(mktemp -d "$HOME/.karnel-restore.XXXXXX") || { rm -rf "$tmp"; return 1; }

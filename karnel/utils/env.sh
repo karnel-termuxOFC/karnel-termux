@@ -46,14 +46,16 @@ _karnel_prefer_prefix_bin() {
 _karnel_prefer_prefix_bin
 unset -f _karnel_prefer_prefix_bin
 
+# Respect an explicit override (tests and isolated prefixes rely on it), and
+# otherwise fall back to the XDG locations.
 # configuración
-KARNEL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/karnel"
+: "${KARNEL_CONFIG:=${XDG_CONFIG_HOME:-$HOME/.config}/karnel}"
 
 # cache
-KARNEL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/karnel"
+: "${KARNEL_CACHE:=${XDG_CACHE_HOME:-$HOME/.cache}/karnel}"
 
 # datos del usuario
-KARNEL_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data"
+: "${KARNEL_DATA:=${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data}"
 
 # -------------------------
 # Rutas internas del CLI

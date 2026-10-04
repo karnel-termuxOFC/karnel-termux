@@ -95,7 +95,6 @@ _install_opencode_proot_impl() {
     export TMPDIR=/tmp
     export HOME=/root
     npm install -g opencode-ai@1.18.15
-    _fix_npm_shebang "opencode" || return 1
   ' &>>"$LOG_FILE"
 
   proot_ubuntu /bin/bash -c 'touch /root/.opencode/.karnel-managed' &>>"$LOG_FILE"

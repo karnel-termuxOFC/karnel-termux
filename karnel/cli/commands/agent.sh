@@ -115,7 +115,7 @@ agent_main() {
 		log_error "Unknown subcommand: ${D_CYAN}$cmd${D_NC}"
 		echo
 		agent_help
-		exit 1
+		return 1
 		;;
 	esac
 }

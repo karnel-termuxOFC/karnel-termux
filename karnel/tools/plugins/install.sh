@@ -1224,7 +1224,7 @@ _plugin_confirm_unsafe() {
 
   log_warn "'$repo' is not approved by the Karnel registry."
   log_warn "Plugins execute Bash with all permissions of your current user; Bash has no sandbox here."
-  read_confirm "Install unsafe plugin '$repo'?" answer
+  read_confirm "Install unsafe plugin '$repo'?" answer n
 }
 
 _plugin_install_unsafe_repo() {

@@ -84,6 +84,16 @@ _karnel_dispatch() {
   return 1
 }
 
+# Count of AI tools straight from the registry so help/TUI copy never drifts
+# when a tool is added under tools/ai/.
+_karnel_ai_tool_count() {
+  local registry="$KARNEL_PATH/tools/ai/all.sh"
+  local count=0
+  [[ -f "$registry" ]] || { echo 0; return 0; }
+  count=$(grep -cE '^[[:space:]]*"[^"]+:[^"]+:[^"]*"' "$registry" 2>/dev/null) || count=0
+  echo "${count:-0}"
+}
+
 karnel_help() {
   echo
   box "◈ KARNEL v${KARNEL_VERSION} ◈"
@@ -137,7 +147,7 @@ karnel_help() {
   echo
   log_info "Use with: karnel install|update|reinstall|uninstall <target> [--tool...]"
   echo
-  printf "    ${D_GREEN}%-10s${NC} %s\n" "ai" "43 AI tools (OpenCode, Cactus, Hugging Face, Claude, Ollama, Goose, etc.)"
+  printf "    ${D_GREEN}%-10s${NC} %s\n" "ai" "$(_karnel_ai_tool_count) AI tools (OpenCode, Cactus, Hugging Face, Claude, Ollama, Goose, etc.)"
   printf "    ${D_GREEN}%-10s${NC} %s\n" "auto" "Automation (n8n)"
   printf "    ${D_GREEN}%-10s${NC} %s\n" "db" "PostgreSQL, MariaDB, SQLite, MongoDB, Redis"
   printf "    ${D_GREEN}%-10s${NC} %s\n" "deploy" "Vercel, Railway, Netlify, Supabase CLIs"
@@ -200,8 +210,10 @@ _dialog_menu() {
   local choice
   local menu_height=20
   local menu_width=65
-  local list_height=$(( ${#options[@]} / 2 ))
-  if (( list_height > 18 )); then list_height=18; fi
+  # Show as many entries as the box can hold instead of half of them.
+  # `#options / 2` pushed the lower half of every menu behind a scroll.
+  local list_height=${#options[@]}
+  if (( list_height > 16 )); then list_height=16; fi
   if (( list_height < 6 )); then list_height=6; fi
   if [[ "$TUI_BIN" == "dialog" ]]; then
     choice=$(dialog --clear --backtitle "Karnel v$KARNEL_VERSION" --title "$title" --menu "$prompt" $menu_height $menu_width $list_height "${options[@]}" 2>&1 >/dev/tty)
@@ -219,7 +231,8 @@ _dialog_checklist() {
   shift 2
   local options=("$@")
   local selections
-  local list_height=$(( ${#options[@]} / 3 ))
+  # Same for checklists: one third of the entries was all that was visible.
+  local list_height=${#options[@]}
   if (( list_height > 18 )); then list_height=18; fi
   if (( list_height < 6 )); then list_height=6; fi
   if [[ "$TUI_BIN" == "dialog" ]]; then
@@ -400,27 +413,48 @@ _tui_main_menu() {
   done
 }
 
+# Count the installable tools of a module directory so menu labels stay in
+# sync with the registry: a hardcoded tool count in the source went stale once
+# the AI registry outgrew it, and the menu kept advertising the old number.
+_tui_module_count() {
+  local module="$1" dir="$KARNEL_PATH/tools/$module" entry count=0
+  [[ -d "$dir" ]] || { printf '0'; return 0; }
+  for entry in "$dir"/*/install.sh; do
+    [[ -f "$entry" ]] && count=$((count + 1))
+  done
+  printf '%s' "$count"
+}
+
+_tui_module_label() {
+  local module="$1" label="$2" count
+  count=$(_tui_module_count "$module")
+  if (( count > 1 )); then
+    printf '%s (%s)' "$label" "$count"
+  else
+    printf '%s' "$label"
+  fi
+}
+
 _tui_list_menu() {
-  local modules="ai db lang dev editor npm shell ui auto deploy games network utils osint voice plugin security"
   local choice
   choice=$(_dialog_menu "List Tools" "Select a module to list:" \
-    "ai" "AI Tools (43)" \
-    "db" "Databases" \
-    "lang" "Programming Languages" \
-    "editor" "Code Editors" \
-    "dev" "Development Tools" \
-    "npm" "NPM Packages" \
-    "shell" "Shell Plugins" \
-    "ui" "Termux Interface" \
-    "auto" "Automation" \
-    "deploy" "Deploy CLIs" \
-    "games" "Games" \
-    "network" "Network Tools" \
-    "utils" "Utilities" \
-    "osint" "OSINT Tools" \
-      "voice" "Voice Commands" \
-      "plugin" "Plugin System" \
-    "security" "Security Tools" \
+    "ai" "$(_tui_module_label ai "AI Tools")" \
+    "db" "$(_tui_module_label db "Databases")" \
+    "lang" "$(_tui_module_label lang "Programming Languages")" \
+    "editor" "$(_tui_module_label editor "Code Editors")" \
+    "dev" "$(_tui_module_label dev "Development Tools")" \
+    "npm" "$(_tui_module_label npm "NPM Packages")" \
+    "shell" "$(_tui_module_label shell "Shell Plugins")" \
+    "ui" "$(_tui_module_label ui "Termux Interface")" \
+    "auto" "$(_tui_module_label auto "Automation")" \
+    "deploy" "$(_tui_module_label deploy "Deploy CLIs")" \
+    "games" "$(_tui_module_label games "Games")" \
+    "network" "$(_tui_module_label network "Network Tools")" \
+    "utils" "$(_tui_module_label utils "Utilities")" \
+    "osint" "$(_tui_module_label osint "OSINT Tools")" \
+    "voice" "$(_tui_module_label voice "Voice Commands")" \
+    "plugin" "$(_tui_module_label plugin "Plugin System")" \
+    "security" "$(_tui_module_label security "Security Tools")" \
     "back" "Back to Main Menu")
   local es=$?
   if [[ $es -ne 0 || "$choice" == "back" || -z "$choice" ]]; then
@@ -752,11 +786,19 @@ _tui_install_menu() {
     fi
     
     case "$target" in
-      ai|db|lang|dev|utils|network|shell|ui)
-        _tui_install_checklist "$target"
+      plugin|voice|supabase|back)
+        if _dialog_yesno "Install Module" "Do you want to install module '$target' completely?"; then
+          clear
+          karnel_main "install" "$target"
+          echo
+          read -r -p "Press Enter to return..." temp
+        fi
         ;;
       *)
-        if _dialog_yesno "Install Module" "Do you want to install module '$target' completely?"; then
+        if [[ -d "$KARNEL_PATH/tools/$target" ]] &&
+          compgen -G "$KARNEL_PATH/tools/$target/*/install.sh" >/dev/null 2>&1; then
+          _tui_install_checklist "$target"
+        elif _dialog_yesno "Install Module" "Do you want to install module '$target' completely?"; then
           clear
           karnel_main "install" "$target"
           echo
@@ -770,114 +812,35 @@ _tui_install_menu() {
 _tui_install_checklist() {
   local target="$1"
   local -a opts=()
-  
-  case "$target" in
-    lang)
-      opts=(
-        "bun" "Bun (JS Runtime)" OFF
-        "nodejs" "Node.js LTS" OFF
-        "python" "Python" OFF
-        "perl" "Perl" OFF
-        "php" "PHP" OFF
-        "rust" "Rust" OFF
-        "clang" "C/C++ (clang)" OFF
-        "golang" "Go (golang)" OFF
-      )
-      ;;
-    db)
-      opts=(
-        "postgresql" "PostgreSQL" OFF
-        "mariadb" "MariaDB" OFF
-        "sqlite" "SQLite" OFF
-        "mongodb" "MongoDB" OFF
-        "redis" "Redis" OFF
-      )
-      ;;
-    ai)
-      import "@/tools/ai/all"
-      opts=()
-      local entry id name binaries
-      for entry in "${AI_TOOLS_REGISTRY[@]}"; do
-        IFS=':' read -r id name binaries <<< "$entry"
-        opts+=("$id" "$name" OFF)
-      done
-      ;;
-    dev)
-      opts=(
-        "gh" "GitHub CLI" OFF
-        "wget" "Wget" OFF
-        "curl" "Curl" OFF
-        "fzf" "Fzf" OFF
-        "jq" "Jq" OFF
-        "lsd" "LSD (modern ls)" OFF
-        "bat" "Bat (modern cat)" OFF
-        "proot" "Proot" OFF
-        "ncurses" "Ncurses Utils" OFF
-        "tmate" "Tmate" OFF
-        "cloudflared" "Cloudflared" OFF
-        "translate" "Translate Shell" OFF
-        "html2text" "html2text" OFF
-        "bc" "Bc (calculator)" OFF
-        "tree" "Tree" OFF
-        "imagemagick" "ImageMagick" OFF
-        "shfmt" "Shfmt" OFF
-        "make" "Make" OFF
-        "udocker" "Udocker" OFF
-        "tmux" "Tmux" OFF
-        "openssh" "OpenSSH" OFF
-        "snyk" "Snyk" OFF
-      )
-      ;;
-    shell)
-      opts=(
-        "powerlevel10k" "Powerlevel10k" OFF
-        "zsh-defer" "Zsh Defer" OFF
-        "zsh-autosuggestions" "Zsh Autosuggestions" OFF
-        "zsh-syntax-highlighting" "Zsh Syntax Highlighting" OFF
-        "history-substring" "History Substring Search" OFF
-        "zsh-completions" "Zsh Completions" OFF
-        "fzf-tab" "Fzf Tab" OFF
-        "you-should-use" "You Should Use" OFF
-        "zsh-autopair" "Zsh Autopair" OFF
-        "better-npm" "Better NPM" OFF
-      )
-      ;;
-    ui)
-      opts=(
-        "font" "Meslo Nerd Font" OFF
-        "cursor" "Green cursor" OFF
-        "extra-keys" "Custom Termux keys" OFF
-        "banner" "Startup banner" OFF
-      )
-      ;;
-    utils)
-      opts=(
-        "fconv" "File Converter" OFF
-        "filecheck" "File Checker" OFF
-        "websites" "Websites Creator" OFF
-        "notes" "Smart Notes" OFF
-        "treex" "Tree Explorer" OFF
-        "passman" "Password Master" OFF
-        "applaunch" "App Launcher" OFF
-        "splash" "Loading Screen" OFF
-        "httptmux" "HTTP API Client" OFF
-        "zork" "Zork Adventure Games" OFF
-        "qrcode" "QR Code Generator" OFF
-        "superfile" "SuperFile" OFF
-      )
-      ;;
-    network)
-      opts=(
-        "dark" "Dark Web OSINT" OFF
-        "dedsec-network" "DedSec Network Toolkit" OFF
-      )
-      ;;
-  esac
-  
+  local dir id title
+
+  # Build the checklist straight from tools/<module>/*/ so every module stays
+  # covered without maintaining a second copy of the tool list here.
+  for dir in "$KARNEL_PATH/tools/$target"/*/; do
+    [[ -f "$dir/install.sh" ]] || continue
+    id="$(basename "$dir")"
+    title="$id"
+    if [[ -f "$dir/README.md" ]]; then
+      title="$(sed -n '1{s/^#[#]*[[:space:]]*//;p;}' "$dir/README.md" 2>/dev/null)"
+    fi
+    [[ -n "$title" ]] || title="$id"
+    opts+=("$id" "$title" OFF)
+  done
+
+  if ((${#opts[@]} == 0)); then
+    if _dialog_yesno "Install Module" "No selectable tools in '$target'. Install the whole module?"; then
+      clear
+      karnel_main "install" "$target"
+      echo
+      read -r -p "Press Enter to return..." temp
+    fi
+    return 0
+  fi
+
   local selections
   selections=$(_dialog_checklist "Install $target Tools" "Select tools to install (Space to select):" "${opts[@]}")
   local exit_status=$?
-  
+
   if [[ $exit_status -eq 0 ]] && [[ -n "$selections" ]]; then
     local -a clean_selections=()
     for item in $selections; do
@@ -887,7 +850,7 @@ _tui_install_checklist() {
         clean_selections+=("--$cleaned")
       fi
     done
-    
+
     if [[ ${#clean_selections[@]} -gt 0 ]]; then
       clear
       log_info "Running: karnel install $target ${clean_selections[*]}"

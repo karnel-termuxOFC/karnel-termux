@@ -8,10 +8,13 @@ LOG_FILE="$KARNEL_CACHE/install_zork.log"
 ZORK_DATA_DIR="${KARNEL_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data}/zork"
 ZORK_MARKER="$ZORK_DATA_DIR/.karnel-installed"
 
+# The host's TLS certificate does not validate, so HTTPS to infocom-if.org
+# fails outright. These are fetched over plain HTTP and authenticated by the
+# pinned SHA-256 digests instead.
 ZORK_URLS=(
-  "1:https://www.infocom-if.org/downloads/zork1.zip"
-  "2:https://www.infocom-if.org/downloads/zork2.zip"
-  "3:https://www.infocom-if.org/downloads/zork3.zip"
+  "1|http://www.infocom-if.org/downloads/zork1.zip|645027fb189ba8fd30daecca609e68e2bf2337b76e7b4f925ccf58778f3eac40"
+  "2|http://www.infocom-if.org/downloads/zork2.zip|7c360a14ec61d8e8f265e1aa99a13487c5e0f016a752e4b32314405a0e9ffea0"
+  "3|http://www.infocom-if.org/downloads/zork3.zip|ef4a3b2bb7d3ae65de54a54520b550f13b3a2e964985550ffd401c8925bd0b10"
 )
 
 _install_zork_deps() {
@@ -53,13 +56,21 @@ _download_zork_data_impl() {
   staging_dir=$(mktemp -d "$(dirname "$ZORK_DATA_DIR")/.zork.XXXXXX") || return 1
 
   for entry in "${ZORK_URLS[@]}"; do
-    local num="${entry%%:*}"
-    local url="${entry#*:}"
+    local num="${entry%%|*}"
+    local url="${entry#*|}"
+    local expected_sha="${url##*|}"
+    url="${url%|*}"
     local zip_file="$staging_dir/zork${num}.zip"
 
     if ! curl -sSfL "$url" -o "$zip_file" 2>>"$LOG_FILE"; then
       rm -rf "$staging_dir"
       log_error "Failed to download Zork ${num}"
+      return 1
+    fi
+
+    if ! verify_sha256 "$zip_file" "$expected_sha"; then
+      rm -rf "$staging_dir"
+      log_error "Zork ${num} failed integrity verification"
       return 1
     fi
 
@@ -71,7 +82,7 @@ _download_zork_data_impl() {
   done
 
   for entry in "${ZORK_URLS[@]}"; do
-    local num="${entry%%:*}"
+    local num="${entry%%|*}"
     if [ ! -f "$staging_dir/DATA/ZORK${num}.DAT" ]; then
       rm -rf "$staging_dir"
       log_error "Zork ${num} data not found after extraction"
@@ -105,7 +116,7 @@ _create_zork_wrapper() {
   fi
   cat > "$wrapper" << 'WRAPPER'
 #!/usr/bin/env bash
-ZORK_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data/zork"
+ZORK_DIR="${KARNEL_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data}/zork"
 ROM_DIR="$ZORK_DIR/DATA"
 
 if [ ! -d "$ROM_DIR" ]; then

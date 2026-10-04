@@ -70,7 +70,7 @@ env_set() {
 	if grep -q "^export $escaped_key=" "$rc_file" 2>/dev/null; then
 		echo
 		log_warn "Variable $D_CYAN$key$D_YELLOW already exists in $(basename "$rc_file")"
-		read_confirm "Replace it?" confirm
+		read_confirm "Replace it?" confirm n
 		if [[ "$confirm" != "y" ]]; then
 			echo
 			log_warn "Operation cancelled"
@@ -155,7 +155,7 @@ env_unset() {
 
 	echo
 	log_warn "This will remove $D_CYAN$key$D_YELLOW from $(basename "$rc_file")"
-	read_confirm "Are you sure?" confirm
+	read_confirm "Are you sure?" confirm n
 	if [[ "$confirm" != "y" ]]; then
 		echo
 		log_warn "Operation cancelled"

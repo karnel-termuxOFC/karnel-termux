@@ -23,5 +23,10 @@ while IFS= read -r file; do
   esac
 done <<< "$file_list"
 
-shellcheck --severity=error "${scripts[@]}"
+# -x lets shellcheck follow `source`/`# shellcheck source=` into files that are
+# already part of the input set instead of failing with "was not specified as
+# input"; -P SCRIPTDIR keeps those relative resolutions anchored to each script
+# rather than to the caller's working directory, which made the run's outcome
+# depend on how the suite was invoked (npm run vs. a direct bash call).
+shellcheck --severity=error -x -P SCRIPTDIR "${scripts[@]}"
 printf 'ShellCheck: %d Bash script(s), error gate clean\n' "${#scripts[@]}"

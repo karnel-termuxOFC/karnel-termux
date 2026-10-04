@@ -434,7 +434,7 @@ agent_apply_files() {
 		if (( existed )) && [[ "$AGENT_CONFIRM_COMMANDS" == "1" && "$AGENT_YES" != "1" ]]; then
 			if [[ -t 0 ]]; then
 				local _wf
-				if ! agent_confirm "Overwrite $target?" _wf; then
+				if ! agent_confirm "Overwrite $target?" _wf n; then
 					log_warn "Skipped overwriting $target"
 					continue
 				fi
@@ -625,7 +625,11 @@ agent_execute_commands() {
 				continue
 			fi
 		elif [[ "$AGENT_CONFIRM_COMMANDS" == "1" && "$AGENT_YES" != "1" ]]; then
-			if [[ -t 0 ]]; then
+			# --auto alone never grants code execution: the explicit -y flag
+			# is what opts in to running the model's commands unattended.
+			if [[ "${KARNEL_AUTO:-0}" == "1" ]]; then
+				log_warn "Skipping command in --auto mode (use -y to auto-approve)"
+			elif [[ -t 0 ]]; then
 				local _ans
 				if agent_confirm "Run this command?" _ans; then
 					run=1
@@ -1305,10 +1309,10 @@ agent_server_stop() {
 # badly on some Termux fonts).
 # ------------------------------------------------------------
 agent_confirm() {
-	local prompt="$1" var="$2" _val
+	local prompt="$1" var="$2" auto_answer="${3:-y}" _val
 	if [[ "${KARNEL_AUTO:-0}" == "1" ]]; then
-		read -r "$var" <<<"y"
-		return 0
+		read -r "$var" <<<"$auto_answer"
+		[[ "$auto_answer" == "y" ]] && return 0 || return 1
 	fi
 	while true; do
 		printf '    %b%b [%b]%b\n' "$D_YELLOW" "$prompt" "${D_GREEN}y${GRAY}/${D_RED}n${NC}" "$NC" >&2

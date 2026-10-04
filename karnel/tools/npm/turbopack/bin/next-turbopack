@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
-NODE_GLIBC="${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data/node-glibc/bin/node"
+NODE_GLIBC="${KARNEL_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data}/node-glibc/bin/node"
 NODE_GLIBC_DIR="$(dirname "$NODE_GLIBC")"
 
 if [[ ! -x "$NODE_GLIBC" ]]; then

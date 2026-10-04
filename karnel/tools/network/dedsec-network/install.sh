@@ -5,9 +5,9 @@ import "@/utils/version"
 import "@/utils/downloaded-python"
 
 LOG_FILE="$KARNEL_CACHE/install_network.log"
-DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/DedSec%27s%20Network.py"
 
 install_dedsec_network() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/DedSec%27s%20Network.py"
   local TOOL_DIR="$KARNEL_DATA/network/dedsec-network"
   local BIN_NAME="dedsec-network"
   log_info "Installing DedSec Network Toolkit (scanner + OSINT + pentest)..."
@@ -29,6 +29,7 @@ uninstall_dedsec_network() {
 }
 
 update_dedsec_network() {
+  local DOWNLOAD_URL="https://raw.githubusercontent.com/dedsec1121fk/DedSec/87d69293f4b89b8ab114fa644074629e86313182/Scripts/Network%20Tools/DedSec%27s%20Network.py"
   local TOOL_DIR="$KARNEL_DATA/network/dedsec-network"
   local BIN_NAME="dedsec-network"
   log_info "Updating DedSec Network Toolkit..."

@@ -178,7 +178,7 @@ doctor_termux() {
     else
       log_warn "Directory missing or read-only: $(basename "$dir")"
       ((warnings++))
-      fix_commands+=("mkdir -p \"$dir\" && chmod 755 \"$dir\"")
+      fix_commands+=("mkdir -p -m 700 \"$dir\" && chmod 700 \"$dir\"")
       fix_descriptions+=("Recreate directory: $(basename "$dir")")
       fix_callbacks+=("_fix_mkdir")
     fi
@@ -569,16 +569,24 @@ doctor_termux() {
     fix_callbacks+=("_fix_symlinks")
   fi
 
-  # Check if banner is installed in shell config
+  # Check if banner is installed in shell config. Reuse the installer's own
+  # detection so doctor and `karnel install ui --banner` can never disagree on
+  # which rc file owns the banner.
+  import "@/tools/ui/banner/install"
   local shell_config=""
-  if [[ -f "$HOME/.zshrc" ]]; then
-    shell_config="$HOME/.zshrc"
-  elif [[ -f "$HOME/.bashrc" ]]; then
-    shell_config="$HOME/.bashrc"
-  fi
+  shell_config="$(_detect_shell_config)"
 
   if [[ -n "$shell_config" ]]; then
-    if grep -qF "# ===== Karnel Banner =====" "$shell_config" 2>/dev/null; then
+    if grep -qF "# ===== Karnel Banner =====" "$shell_config" 2>/dev/null &&
+      ! grep -qF "# ===== /Karnel Banner =====" "$shell_config" 2>/dev/null; then
+      # Legacy block: no end marker, so uninstalling it leaves the
+      # `render_banner` call orphaned in the shell config.
+      log_warn "Partial Karnel banner block in $(basename "$shell_config")"
+      ((warnings++))
+      fix_commands+=("karnel reinstall ui --banner")
+      fix_descriptions+=("Repair legacy Karnel banner block")
+      fix_callbacks+=("_fix_banner")
+    elif grep -qF "# ===== Karnel Banner =====" "$shell_config" 2>/dev/null; then
       log_success "Banner installed in $(basename "$shell_config")"
     else
       log_warn "Banner not installed in $(basename "$shell_config")"
@@ -1434,8 +1442,8 @@ doctor_termux() {
         # caches, reinstalling packages or deleting unrelated software.
         if [[ -n "$callback" && -n "${DESTRUCTIVE_FIXES[$callback]:-}" ]]; then
           if $FIX_MODE; then
-            if [[ -t 0 ]]; then
-              read_confirm "DANGEROUS: ${fix_descriptions[$i]}. Apply?" apply_this
+            if [[ -t 0 && "${KARNEL_AUTO:-0}" != "1" ]]; then
+              read_confirm "DANGEROUS: ${fix_descriptions[$i]}. Apply?" apply_this n
             else
               log_warn "Skipping destructive fix (non-interactive): ${fix_descriptions[$i]}"
               continue

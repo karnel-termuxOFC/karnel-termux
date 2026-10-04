@@ -13,7 +13,7 @@ _init_lang_tools() {
   LANG_TOOLS["JavaScript:npm_audit"]="npm audit|deps|npm audit --audit-level=high|||native"
   LANG_TOOLS["JavaScript:vitest"]="vitest|test|npx --no-install vitest run|||native"
   LANG_TOOLS["JavaScript:jest"]="jest|test|npx --no-install jest|||native"
-  LANG_TOOLS["JavaScript:markdownlint"]="markdownlint-cli2|docs|npx --no-install markdownlint-cli2 \"**/*.md\" --no-missiglob|npx --no-install markdownlint-cli2 --fix \"**/*.md\"|safe|native"
+  LANG_TOOLS["JavaScript:markdownlint"]="markdownlint-cli2|docs|npx --no-install markdownlint-cli2 \"**/*.md\"|npx --no-install markdownlint-cli2 --fix \"**/*.md\"|safe|native"
 
   # TypeScript
   LANG_TOOLS["TypeScript:tsc"]="tsc|type-check|npx --no-install tsc --noEmit|||native"

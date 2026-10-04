@@ -170,6 +170,13 @@ _uninstall_full_module() {
     return 1
     ;;
   esac
+
+  local rc=$?
+  if (( rc == 0 || rc == 2 )); then
+    karnel_mark_module_not_installed "$target"
+    return 0
+  fi
+  return "$rc"
 }
 
 _uninstall_specific_tools() {

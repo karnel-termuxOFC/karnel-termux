@@ -1235,7 +1235,7 @@ EOF
 
 _init_confirm_overwrite() {
 	local confirm
-	read_confirm "Karnel may overwrite existing project files. Continue?" confirm
+	read_confirm "Karnel may overwrite existing project files. Continue?" confirm n
 	if [[ "$confirm" != "y" ]]; then
 		log_warn "Cancelled"
 		return 1

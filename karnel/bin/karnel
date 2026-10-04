@@ -36,7 +36,7 @@ set -- "${_karnel_args[@]}"
 
 # Informational flags must not initialize user state or trigger update checks.
 case "${1:-}" in
-  --help|-h|--version|help|version|list|show) KARNEL_READ_ONLY=1 ;;
+  --help|-h|--version|help|version|list|show|search|stats|status) KARNEL_READ_ONLY=1 ;;
 esac
 
 # cargar entorno

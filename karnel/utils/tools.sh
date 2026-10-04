@@ -1,22 +1,71 @@
 #!/usr/bin/env bash
 
-_tool_uses_central_ownership() {
-  local identity="$1/$2"
+# Module-level install markers. `karnel stats` reads them to report which
+# modules the user has installed; they are written only after a full-module
+# lifecycle action succeeds.
+karnel_mark_module_installed() {
+  [[ -n "${KARNEL_DATA:-}" ]] || return 0
+  local dir="$KARNEL_DATA/$1"
+  [[ -d "$dir" && ! -L "$dir" ]] || mkdir -p "$dir" 2>/dev/null || return 0
+  (umask 077; : >"$dir/.installed") 2>/dev/null || true
+  chmod 600 "$dir/.installed" 2>/dev/null || true
+}
 
-  case "$identity" in
-    lang/nodejs|lang/python|lang/perl|lang/php|lang/rust|lang/clang|lang/golang) ;;
-    db/postgresql|db/mariadb|db/sqlite|db/mongodb|db/redis) ;;
-    dev/gh|dev/wget|dev/curl|dev/lsd|dev/bat|dev/proot|dev/ncurses|dev/tmate|dev/openssh|dev/tmux|dev/cloudflared|dev/translate|dev/html2text|dev/jq|dev/bc|dev/tree|dev/fzf|dev/imagemagick|dev/shfmt|dev/make|dev/udocker|dev/snyk) ;;
-    npm/typescript|npm/nestjs|npm/prettier|npm/live-server|npm/localtunnel|npm/vercel|npm/markserv|npm/psqlformat|npm/ncu|npm/ngrok) ;;
-    security/nmap|security/hydra|security/dirb|security/john|security/aircrack-ng|security/smbclient|security/netcat|security/tcpdump|security/whois|security/hashcat|security/binwalk|security/foremost|security/steghide|security/exiftool) ;;
-    auto/n8n|editor/code-server|editor/neovim) ;;
-    *) return 1 ;;
+karnel_mark_module_not_installed() {
+  [[ -n "${KARNEL_DATA:-}" ]] || return 0
+  rm -f "$KARNEL_DATA/$1/.installed" 2>/dev/null || true
+}
+
+# Tools that keep their own granular ledger (per-binary, per-workspace or
+# per-package markers) must stay out of the central ledger. A second,
+# tool-wide marker would let `karnel uninstall` claim installs Karnel never
+# tracked and would defeat their per-file checks.
+_tool_has_self_managed_ownership() {
+  case "$1/$2" in
+    # AI tools are dispatched through _run_ai_tool_action and manage their own
+    # data directories; deploy CLIs record which files they installed.
+    ai/* | deploy/*)
+      return 0
+      ;;
+    lang/bun | npm/turbopack | editor/nvchad | utils/herdr | utils/superfile | utils/zork)
+      return 0
+      ;;
+    security/amass | security/burpsuite | security/dnsrecon | security/enum4linux | security/ffuf | security/gobuster | security/masscan | security/metasploit | security/nikto | security/sqlmap | security/subfinder | security/theharvester | security/whatweb | security/zap)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
   esac
 }
 
+# Every other tool shipped under tools/<module>/<tool>/ is tracked by the
+# central ownership ledger, so uninstall/update refuse to touch installs that
+# Karnel never recorded. Modules are matched by name (not by probing the
+# filesystem) so the lifecycle helpers stay testable without a checkout and so
+# a newly added tool is covered the moment it lands in a module registry.
+_tool_uses_central_ownership() {
+  _tool_has_self_managed_ownership "$1" "$2" && return 1
+
+  case "$1" in
+    auto | db | dev | editor | games | lang | network | npm | osint | security | shell | ui | utils)
+      [[ -n "$2" ]] || return 1
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 _tool_ownership_marker() {
   if [[ -z "${KARNEL_DATA:-}" ]]; then
-    log_error "KARNEL_DATA is required for tool ownership state"
+    # tests/ and partial sources may load this file without utils/log.sh;
+    # report the problem ourselves instead of dying on a missing function.
+    if declare -F log_error >/dev/null 2>&1; then
+      log_error "KARNEL_DATA is required for tool ownership state"
+    else
+      printf 'KARNEL_DATA is required for tool ownership state\n' >&2
+    fi
     return 1
   fi
   printf '%s/ownership/%s/%s\n' "$KARNEL_DATA" "$1" "$2"
@@ -100,6 +149,56 @@ _register_safe_reinstall_handlers() {
   done
 }
 
+# Modules without a per-tool registry (tools/<module>/all.sh) cannot go through
+# the generic batch path: bootstrap would fail on the missing file. Route them
+# explicitly so the user gets an actionable message instead of an import error.
+_route_registryless_tools() {
+  local module="$1"
+  local action="$2"
+  shift 2
+  local -a tools=("$@")
+  local tool urc rc=0
+
+  case "$module" in
+  plugin)
+    import "@/cli/commands/plugin"
+    for tool in "${tools[@]}"; do
+      case "$action" in
+      install)
+        install_plugin "$tool" || rc=1
+        ;;
+      update)
+        _plugin_update_main "$tool" || rc=1
+        ;;
+      uninstall)
+        uninstall_plugin "$tool" || rc=1
+        ;;
+      reinstall)
+        uninstall_plugin "$tool"
+        urc=$?
+        (( urc == 0 || urc == 2 )) || { rc=1; continue; }
+        install_plugin "$tool" || rc=1
+        ;;
+      esac
+    done
+    ;;
+  voice)
+    log_error "voice has no individual tools; run 'karnel $action voice'"
+    rc=1
+    ;;
+  supabase)
+    log_error "supabase has no individual tools; run 'karnel $action deploy --supabase'"
+    rc=1
+    ;;
+  *)
+    log_error "Unknown $action target: $module"
+    echo "Run 'karnel $action' to see available targets"
+    rc=1
+    ;;
+  esac
+  return "$rc"
+}
+
 _batch_tool_action() {
   local module="$1"
   local action="$2"
@@ -113,7 +212,26 @@ _batch_tool_action() {
   # is attached (piped/non-interactive). Ownership is still guarded upstream.
   [[ "$action" == "uninstall" ]] && export KARNEL_REMOVE_DEFAULT=y
 
-  import "@/tools/$module/all"
+  # Without a registry the import would abort the whole command. Only route to
+  # the registryless handler when the requested tools have no lifecycle
+  # functions at all — a module whose handlers are already loaded (tests, or a
+  # tool set defined by an earlier import) must keep the normal per-tool flow.
+  if [[ ! -f "${KARNEL_PATH:-}/tools/$module/all.sh" ]]; then
+    local handler_defined=0
+    local candidate
+    for candidate in "${tools[@]}"; do
+      if declare -f "${action}_${candidate//-/_}" &>/dev/null; then
+        handler_defined=1
+        break
+      fi
+    done
+    if (( ! handler_defined )); then
+      _route_registryless_tools "$module" "$action" "${tools[@]}"
+      return $?
+    fi
+  else
+    import "@/tools/$module/all"
+  fi
 
   for tool in "${tools[@]}"; do
     local normalized="${tool//-/_}"

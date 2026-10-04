@@ -270,16 +270,21 @@ read_secret() {
 }
 
 # --- Confirmación s/n ---
-# Uso: read_confirm "¿Continuar?" VAR_NAME
+# Uso: read_confirm "¿Continuar?" VAR_NAME [AUTO_ANSWER]
 # Retorna 0 si sí, 1 si no. VAR_NAME recibe "y" o "n"
+#
+# AUTO_ANSWER ("y" por omisión) es lo que se responde cuando --auto activa el
+# modo no interactivo. Las acciones destructivas deben pasar "n" explícitamente
+# para que --auto nunca las ejecute sin que el usuario lo pida.
 read_confirm() {
 	local prompt="$1"
 	local var="$2"
+	local auto_answer="${3:-y}"
 	local _val
 
 	if [[ "${KARNEL_AUTO:-0}" == "1" ]]; then
-		read -r "$var" <<<"y"
-		return 0
+		read -r "$var" <<<"$auto_answer"
+		[[ "$auto_answer" == "y" ]] && return 0 || return 1
 	fi
 
 	if [[ ! -t 0 ]]; then
@@ -309,15 +314,20 @@ read_confirm() {
 # --- Confirmación con default ---
 # default="y" -> [Y/n]  |  default="n" -> [y/N]
 # Retorna 0 si sí, 1 si no. VAR_NAME recibe "y" o "n"
+#
+# Con --auto se responde el propio default (nunca "y" forzado), de modo que
+# una opción destructiva marcada como default "n" no se ejecute sola. Un
+# cuarto argumento permite forzar otra respuesta auto puntual.
 read_confirm_default() {
 	local prompt="$1"
 	local default="$2"
 	local var="$3"
+	local auto_answer="${4:-$2}"
 	local _val
 
 	if [[ "${KARNEL_AUTO:-0}" == "1" ]]; then
-		read -r "$var" <<<"y"
-		return 0
+		read -r "$var" <<<"$auto_answer"
+		[[ "$auto_answer" == "y" ]] && return 0 || return 1
 	fi
 
 	if [[ ! -t 0 ]]; then

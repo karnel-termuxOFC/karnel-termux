@@ -1,41 +1,62 @@
 # shellcheck shell=bash
 
 # Template for security tool installers.
-# Copy this file, replace `tool` in the function names, and set TOOL_NAME/TOOL_PKG.
-
-TOOL_NAME="tool"
-TOOL_PKG="tool"
+# Copy this file, then replace `tool` in the four function names and in the
+# two literal _TOOL/_PKG values inside each handler.
+#
+# IMPORTANT: every handler declares `local _TOOL`/`local _PKG`. These files are
+# all `source`d into one shared shell by `tools/security/all.sh`, so top-level
+# assignments would be overwritten by the next installer and every handler
+# would end up operating on the wrong package.
 
 install_tool() {
-  if command -v "$TOOL_NAME" &>/dev/null; then
-    log_info "$TOOL_NAME is already installed"
+  local _TOOL="tool" _PKG="tool"
+  if command -v "$_TOOL" &>/dev/null; then
+    log_info "$_TOOL is already installed"
     return 2
   fi
-  log_info "Installing $TOOL_NAME..."
-  if pkg install -y "$TOOL_PKG" 2>/dev/null || apt install -y "$TOOL_PKG" 2>/dev/null; then
-    log_success "$TOOL_NAME installed"
-    return 0
+  log_info "Installing $_TOOL..."
+  if pkg install -y "$_PKG" 2>/dev/null || apt install -y "$_PKG" 2>/dev/null; then
+    if command -v "$_TOOL" &>/dev/null; then
+      log_success "$_TOOL installed"
+      return 0
+    fi
   fi
-  log_error "Failed to install $TOOL_NAME"
+  log_error "Failed to install $_TOOL"
   return 1
 }
 
 uninstall_tool() {
-  log_info "Removing $TOOL_NAME..."
-  if pkg uninstall -y "$TOOL_PKG" 2>/dev/null || apt remove -y "$TOOL_PKG" 2>/dev/null; then
-    log_success "$TOOL_NAME removed"
+  local _TOOL="tool" _PKG="tool"
+  if ! command -v "$_TOOL" &>/dev/null; then
+    log_info "$_TOOL is not installed"
+    return 2
+  fi
+  log_info "Removing $_TOOL..."
+  if pkg uninstall -y "$_PKG" 2>/dev/null || apt remove -y "$_PKG" 2>/dev/null; then
+    log_success "$_TOOL removed"
     return 0
   fi
-  log_error "Failed to remove $TOOL_NAME"
+  log_error "Failed to remove $_TOOL"
   return 1
 }
 
 update_tool() {
-  log_info "$TOOL_NAME is updated via package manager"
-  return 2
+  local _TOOL="tool" _PKG="tool"
+  if ! command -v "$_TOOL" &>/dev/null; then
+    log_info "$_TOOL is not installed"
+    return 2
+  fi
+  log_info "Updating $_TOOL..."
+  if pkg install -y "$_PKG" 2>/dev/null || apt install -y "$_PKG" 2>/dev/null; then
+    log_success "$_TOOL updated"
+    return 0
+  fi
+  log_error "Failed to update $_TOOL"
+  return 1
 }
 
 reinstall_tool() {
-  uninstall_tool || return 1
+  uninstall_tool || [[ $? -eq 2 ]] || return 1
   install_tool
 }

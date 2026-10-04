@@ -23,11 +23,28 @@ _stats_version() {
   printf "  ${D_CYAN}%-14s${NC} v%s\n" "Version:" "$KARNEL_VERSION"
   printf "  ${D_CYAN}%-14s${NC} %s\n" "KARNEL_PATH:" "$KARNEL_PATH"
   printf "  ${D_CYAN}%-14s${NC} %s\n" "Shell:" "${SHELL##*/}"
-  printf "  ${D_CYAN}%-14s${NC} %s\n" "Node:" "$(node -v 2>/dev/null || echo 'not installed')"
-  printf "  ${D_CYAN}%-14s${NC} %s\n" "npm:" "$(npm -v 2>/dev/null || echo 'not installed')"
-  printf "  ${D_CYAN}%-14s${NC} %s\n" "Python:" "$(python3 -V 2>/dev/null | awk '{print $2}' || echo 'not installed')"
-  printf "  ${D_CYAN}%-14s${NC} %s\n" "Go:" "$(go version 2>/dev/null | awk '{print $3}' || echo 'not installed')"
-  printf "  ${D_CYAN}%-14s${NC} %s\n" "Rust:" "$(rustc --version 2>/dev/null | awk '{print $2}' || echo 'not installed')"
+  printf "  ${D_CYAN}%-14s${NC} %s\n" "Node:" "$(_stats_probe node node -v)"
+  printf "  ${D_CYAN}%-14s${NC} %s\n" "npm:" "$(_stats_probe npm npm -v)"
+  printf "  ${D_CYAN}%-14s${NC} %s\n" "Python:" "$(_stats_probe python3 python3 -V)"
+  printf "  ${D_CYAN}%-14s${NC} %s\n" "Go:" "$(_stats_probe go go version)"
+  printf "  ${D_CYAN}%-14s${NC} %s\n" "Rust:" "$(_stats_probe rustc rustc --version)"
+}
+
+# Runs <bin> <args> only when the binary exists, so a missing toolchain never
+# prints an empty value (a failed pipe into awk still exits 0).
+_stats_probe() {
+  local bin="$1"
+  shift
+  if ! command -v "$bin" &>/dev/null; then
+    echo "not installed"
+    return 0
+  fi
+  local out
+  if ! out="$("$@" 2>/dev/null)" || [[ -z "$out" ]]; then
+    echo "not installed"
+    return 0
+  fi
+  printf '%s' "$out"
 }
 
 _stats_modules() {
@@ -36,12 +53,16 @@ _stats_modules() {
   local -a modules=(ai auto db deploy dev editor games lang network npm osint plugin security shell ui utils voice)
   local installed=0
   local not_installed=0
-  local status
+  local status marker_count
 
   for mod in "${modules[@]}"; do
-    local marker="${KARNEL_DATA:-$HOME/.local/share/karnel-data}/${mod}/.installed"
-    if [[ -f "$marker" ]]; then
-      status="${GREEN}installed${NC}"
+    if _stats_module_installed "$mod"; then
+      marker_count="$(_stats_owned_tool_count "$mod")"
+      if [[ "$marker_count" -gt 0 ]]; then
+        status="${GREEN}installed${NC} (${marker_count} managed)"
+      else
+        status="${GREEN}installed${NC}"
+      fi
       ((installed++))
     else
       status="${D_RED}—${NC}"
@@ -51,6 +72,43 @@ _stats_modules() {
   done
   echo
   printf "  ${D_CYAN}Total:${NC} %d installed, %d not installed\n" "$installed" "$not_installed"
+}
+
+# A module counts as installed when Karnel recorded it during a full-module
+# install, when at least one of its tools carries an ownership marker, or when
+# the module keeps state under $KARNEL_DATA/<module>.
+_stats_module_installed() {
+  local mod="$1"
+  local -a entries=()
+
+  [[ -f "${KARNEL_DATA:-/nonexistent}/${mod}/.installed" ]] && return 0
+  [[ -d "${KARNEL_DATA:-/nonexistent}/ownership/$mod" ]] &&
+    { shopt -s nullglob; entries=("${KARNEL_DATA}/ownership/$mod"/*); shopt -u nullglob; ((${#entries[@]} > 0)) && return 0; }
+
+  case "$mod" in
+  plugin)
+    shopt -s nullglob
+    entries=("${KARNEL_PLUGINS:-/nonexistent}"/*)
+    shopt -u nullglob
+    ((${#entries[@]} > 0)) && return 0
+    ;;
+  *)
+    shopt -s nullglob
+    entries=("${KARNEL_DATA:-/nonexistent}/$mod"/*)
+    shopt -u nullglob
+    ((${#entries[@]} > 0)) && return 0
+    ;;
+  esac
+  return 1
+}
+
+_stats_owned_tool_count() {
+  local -a entries=()
+  [[ -d "${KARNEL_DATA:-/nonexistent}/ownership/$1" ]] || { echo 0; return; }
+  shopt -s nullglob
+  entries=("${KARNEL_DATA}/ownership/$1"/*)
+  shopt -u nullglob
+  echo "${#entries[@]}"
 }
 
 _stats_disk() {
@@ -84,6 +142,7 @@ _stats_tools() {
   )
 
   local total=0
+  local modules_with_tools=0
   for mod in "${!tool_counts[@]}"; do
     local tools_dir="$KARNEL_PATH/tools/$mod"
     if [[ -d "$tools_dir" ]]; then
@@ -91,6 +150,7 @@ _stats_tools() {
       count=$(find "$tools_dir" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l)
       tool_counts[$mod]=$count
       ((total += count))
+      ((count > 0)) && ((modules_with_tools++))
     fi
   done
 
@@ -99,5 +159,5 @@ _stats_tools() {
     [[ "$count" -gt 0 ]] && printf "    %-12s %d tools\n" "$mod" "$count"
   done
   echo
-  printf "  ${D_CYAN}%-14s${NC} %d tools across %d modules\n" "Total:" "$total" "${#tool_counts[@]}"
+  printf "  ${D_CYAN}%-14s${NC} %d tools across %d modules\n" "Total:" "$total" "$modules_with_tools"
 }

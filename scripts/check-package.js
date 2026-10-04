@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { execFileSync } = require("node:child_process");
-const { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } = require("node:fs");
+const { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } = require("node:fs");
 const { tmpdir } = require("node:os");
 const path = require("node:path");
 
@@ -10,6 +10,51 @@ const packDirectory = mkdtempSync(path.join(tmpdir(), "karnel-package-"));
 const stagingRoot = path.join(packDirectory, "source");
 const releaseCommitPath = path.join(stagingRoot, "karnel", "RELEASE_COMMIT");
 let repositoryHead = "";
+
+// Android shared storage (FUSE) masks permission bits: every file there is
+// 0660 and chmod is a silent no-op, so packing straight from a Termux checkout
+// would publish an npm tarball where nothing — including bin/karnel — is
+// executable. Staging lives on a real filesystem, so normalize there: keep the
+// executable bit when the source has one, otherwise force 0644.
+function normalizeModes(root) {
+  // The git index is the source of truth for "should this file be
+  // executable": the working tree cannot answer that question on shared
+  // storage, where every mode is masked to 0660.
+  const executablePaths = new Set();
+  let haveIndex = false;
+  try {
+    const index = execFileSync("git", ["-C", packageRoot, "ls-files", "-s"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    haveIndex = true;
+    for (const line of index.split("\n")) {
+      const match = /^100755 [0-9a-f]+ \d+\t(.+)$/.exec(line);
+      if (match) executablePaths.add(match[1]);
+    }
+  } catch {
+    // Not a git checkout — fall back to the mode on disk below.
+  }
+
+  const stack = [root];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === ".git" || entry.name === "node_modules") continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const current = statSync(fullPath).mode & 0o777;
+      const relative = path.relative(root, fullPath).split(path.sep).join("/");
+      const isExecutable = haveIndex ? executablePaths.has(relative) : (current & 0o111) !== 0;
+      const target = isExecutable ? 0o755 : 0o644;
+      if (current !== target) chmodSync(fullPath, target);
+    }
+  }
+}
 process.on("exit", () => {
   rmSync(packDirectory, { recursive: true, force: true });
 });
@@ -44,6 +89,9 @@ if (/^[0-9a-f]{40}$/.test(repositoryHead)) {
 } else {
   throw new Error("Required package file is missing: karnel/RELEASE_COMMIT");
 }
+// Normalize after every staged file exists (RELEASE_COMMIT included).
+normalizeModes(stagingRoot);
+
 let output;
 try {
   output = execFileSync(
@@ -121,6 +169,28 @@ for (const packedPath of ["assets/fonts/font.ttf", "karnel/tools/ai/gentle-ai/te
   if (mode !== 0o644) {
     throw new Error(`Packed file must use mode 0644: ${packedPath}`);
   }
+}
+
+// The CLI entry point must be executable in the tarball, otherwise the
+// npm bin symlink fails with EACCES after a global install. Fixtures that do
+// not ship the entry point are exempt, but a package that does ship it must
+// never drop it to an ignore rule or pack it non-executable.
+const entryPoint = "karnel/bin/karnel";
+if (existsSync(path.join(packageRoot, entryPoint))) {
+  if (!paths.includes(entryPoint)) {
+    rmSync(packDirectory, { recursive: true, force: true });
+    throw new Error(`Required package file is missing: ${entryPoint}`);
+  }
+  const mode = statSync(path.join(extractDirectory, "package", entryPoint)).mode & 0o777;
+  if ((mode & 0o111) === 0) {
+    throw new Error(`Packed file must be executable: ${entryPoint} (mode ${mode.toString(8)})`);
+  }
+}
+
+const keepTarball = process.env.KARNEL_KEEP_TARBALL;
+if (keepTarball) {
+  mkdirSync(path.dirname(keepTarball), { recursive: true });
+  writeFileSync(keepTarball, readFileSync(tarball));
 }
 
 const packageVersion = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).version;

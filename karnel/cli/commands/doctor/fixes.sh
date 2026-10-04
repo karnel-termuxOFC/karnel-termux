@@ -13,7 +13,9 @@ _fix_storage() {
 _fix_mkdir() {
   local rc=0
   for dir in "$KARNEL_CONFIG" "$KARNEL_CACHE" "$KARNEL_DATA"; do
-    mkdir -p "$dir" && chmod 755 "$dir" 2>/dev/null || { rc=1; log_warn "Failed to create $dir"; }
+    mkdir -p -m 700 "$dir" 2>/dev/null &&
+      { [[ -d "$dir" && ! -L "$dir" ]] && chmod 700 "$dir"; } ||
+      { rc=1; log_warn "Failed to create $dir"; }
   done
   return $rc
 }
@@ -120,27 +122,12 @@ _fix_symlinks() {
 }
 
 _fix_banner() {
-  local shell_config=""
-  if [[ -f "$HOME/.zshrc" ]]; then
-    shell_config="$HOME/.zshrc"
-  elif [[ -f "$HOME/.bashrc" ]]; then
-    shell_config="$HOME/.bashrc"
-  fi
-  if [[ -z "$shell_config" ]]; then
-    shell_config="$HOME/.zshrc"
-    touch "$shell_config"
-  fi
-  local marker="# ===== Karnel Banner ====="
-  if ! grep -qF "$marker" "$shell_config" 2>/dev/null; then
-    cat >>"$shell_config" <<EOF
-
-$marker
-source "$KARNEL_UTILS/banner.sh"
-render_banner
-EOF
-    return 0
-  fi
-  return 0
+  # Always go through the canonical installer: it writes the full block with
+  # start *and* end markers (plus the zsh precmd hook), which is what the
+  # uninstall path expects. Hand-rolled blocks used to leave `render_banner`
+  # orphaned in .zshrc after an uninstall.
+  import "@/tools/ui/banner/install"
+  install_banner
 }
 
 _fix_ai_install() {

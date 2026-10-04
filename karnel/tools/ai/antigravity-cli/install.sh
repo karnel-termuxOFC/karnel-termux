@@ -220,108 +220,11 @@ _install_antigravity_proot() {
 }
 
 _install_antigravity_proot_impl() {
-  mkdir -p "$(dirname "$LOG_FILE")"
-
-  if ! command -v proot-distro &>/dev/null; then
-    pkg install proot-distro -y &>>"$LOG_FILE"
-  fi
-
-  if [ ! -d "$(_antigravity_detect_ubuntu_root)" ]; then
-    proot-distro install ubuntu &>>"$LOG_FILE"
-  fi
-
-  _antigravity_proot_ubuntu /bin/bash -c \
-    'apt-get update && apt-get upgrade -y && apt-get install -y curl ca-certificates' \
-    &>>"$LOG_FILE"
-
-  _antigravity_proot_ubuntu /bin/bash -c '
-    export SHELL=/bin/bash
-    export TMPDIR=/tmp
-    export HOME=/root
-    echo "Antigravity Proot installation is unavailable because upstream does not publish a verifiable artifact." >&2
-    exit 1
-  ' &>>"$LOG_FILE"
-
-  local ubuntu_root
-  ubuntu_root="$(_antigravity_detect_ubuntu_root)"
-
-  if [ -z "$ubuntu_root" ]; then
-    log_error "Ubuntu rootfs not found"
-    return 1
-  fi
-
-  local upstream_bin=""
-  local candidates=(
-    "$ubuntu_root/root/.local/bin/agy"
-    "$ubuntu_root/root/.agy/bin/agy"
-    "$ubuntu_root/usr/local/bin/agy"
-  )
-  for p in "${candidates[@]}"; do
-    if [ -f "$p" ]; then
-      upstream_bin="$p"
-      break
-    fi
-  done
-
-  if [ -z "$upstream_bin" ]; then
-    log_error "Antigravity CLI binary not found after install"
-    return 1
-  fi
-
-  python3 - "$upstream_bin" "${upstream_bin}.va39" <<'PY'
-import sys, shutil, struct, pathlib
-src = pathlib.Path(sys.argv[1])
-dst = pathlib.Path(sys.argv[2])
-shutil.copyfile(src, dst)
-data = bytearray(dst.read_bytes())
-def get(off): return struct.unpack_from("<I", data, off)[0]
-def put(off, word): struct.pack_into("<I", data, off, word)
-
-lo, hi = 0, len(data)
-for off in range(lo, hi, 4):
-    w = get(off)
-    if (w & 0x7F800000) == 0x53000000:
-        immr, imms = (w >> 16) & 0x3F, (w >> 10) & 0x3F
-        if immr == 42 and imms == 44:
-            put(off, (w & ~((0x3F << 16) | (0x3F << 10))) | (35 << 16) | (37 << 10))
-        elif immr == 22 and imms == 21:
-            put(off, (w & ~((0x3F << 16) | (0x3F << 10))) | (29 << 16) | (28 << 10))
-for off in range(lo, hi - 4, 4):
-    if get(off) == 0x92D3800A and get(off + 4) == 0xF2E0000A:
-        put(off, 0x9280000A); put(off + 4, 0xD35DFD4A)
-for off in range(lo, hi, 4):
-    if get(off) == 0xF2E00029: put(off, 0xD3596129)
-word_rewrites = {
-    0xD2C20009: 0xD2C00409, 0xD2C2000A: 0xD2C0040A, 0xF2C20008: 0xF2DFF408,
-    0xF2C20009: 0xF2DFF409, 0xD2C10009: 0xD2C00209, 0xD2C1000A: 0xD2C0020A,
-    0xF2C38008: 0xF2DFF708, 0xF2C38009: 0xF2DFF709, 0x92560A6C: 0x925D0A6C,
-    0x92560A6A: 0x925D0A6A, 0xD2C3000D: 0xD2C0060D, 0xD2C3000C: 0xD2C0060C,
-    0xD2C08008: 0xD2C00108,
-}
-for off in range(lo, hi, 4):
-    w = get(off)
-    if w in word_rewrites: put(off, word_rewrites[w])
-for off in range(0, len(data) - 12, 4):
-    if get(off) == 0xAA1F03E5 and get(off + 4) == 0xAA1F03E6 and get(off + 8) == 0xD28036E0 and (get(off + 12) & 0xFC000000) == 0x94000000:
-        put(off + 8, 0xD2800600)
-dst.write_bytes(data)
-PY
-
-  chmod +x "${upstream_bin}.va39"
-
-  local wrapper_src="$KARNEL_PATH/tools/ai/antigravity-cli/bin/agy"
-  if [ ! -f "$wrapper_src" ]; then
-    log_error "Wrapper template not found at $wrapper_src"
-    return 1
-  fi
-  sed "s|__UBUNTU_ROOTFS__|$ubuntu_root|g" "$wrapper_src" >"$PREFIX/bin/agy"
-  chmod +x "$PREFIX/bin/agy"
-
-  if ! grep -q '.local/bin' "$ubuntu_root/root/.bashrc" 2>/dev/null; then
-    printf '\n# antigravity-cli\nexport PATH=/root/.local/bin:$PATH\n' >>"$ubuntu_root/root/.bashrc"
-  fi
-
-  return 0
+  # Upstream publishes no verifiable proot artifact. Refuse here, before an
+  # Ubuntu rootfs is provisioned, instead of installing a container we cannot
+  # populate and then failing halfway through.
+  log_error "Antigravity CLI Proot install is unavailable: upstream has no verifiable artifact; use native mode"
+  return 1
 }
 
 install_antigravity_cli() {
@@ -330,25 +233,14 @@ install_antigravity_cli() {
     return 2
   fi
 
-  log_info "Select installation method for Antigravity CLI:"
-
-  read_select "Installation method" SELECTED_METHOD \
-    "Native (recommended) - Compile with glibc support" \
-    "Proot-distro (unavailable: upstream has no verifiable artifact)"
-
-  case "$SELECTED_METHOD" in
-  *Native*)
-    _antigravity_cli_dependencies || return 1
-    _antigravity_download_binary || return 1
-    _antigravity_apply_va39_patches || return 1
-    _antigravity_compile_helper || return 1
-    log_success "Antigravity CLI installed"
-    return 0
-    ;;
-  *Proot-distro*)
-    _install_antigravity_proot
-    ;;
-  esac
+  # Only methods that can succeed are offered: upstream ships no verifiable
+  # proot artifact, so a second entry here would be a prompt that always fails.
+  _antigravity_cli_dependencies || return 1
+  _antigravity_download_binary || return 1
+  _antigravity_apply_va39_patches || return 1
+  _antigravity_compile_helper || return 1
+  log_success "Antigravity CLI installed"
+  return 0
 }
 
 uninstall_antigravity_cli() {
@@ -399,87 +291,10 @@ _update_antigravity_cli_impl() {
     return 0
   fi
 
-  _antigravity_proot_ubuntu /bin/bash -c \
-    'rm -f /root/.local/bin/agy /root/.local/bin/agy.va39' \
-    &>>"$LOG_FILE"
-
-  _antigravity_proot_ubuntu /bin/bash -c '
-    export SHELL=/bin/bash
-    export TMPDIR=/tmp
-    export HOME=/root
-    echo "Antigravity Proot update is unavailable because upstream does not publish a verifiable artifact." >&2
-    exit 1
-  ' &>>"$LOG_FILE"
-
-  local ubuntu_root
-  ubuntu_root="$(_antigravity_detect_ubuntu_root)"
-
-  if [ -z "$ubuntu_root" ]; then
-    log_error "Ubuntu rootfs not found"
-    return 1
-  fi
-
-  local upstream_bin=""
-  local candidates=(
-    "$ubuntu_root/root/.local/bin/agy"
-    "$ubuntu_root/root/.agy/bin/agy"
-    "$ubuntu_root/usr/local/bin/agy"
-  )
-  for p in "${candidates[@]}"; do
-    if [ -f "$p" ]; then
-      upstream_bin="$p"
-      break
-    fi
-  done
-
-  if [ -z "$upstream_bin" ]; then
-    log_error "Antigravity CLI binary not found after update"
-    return 1
-  fi
-
-  log_info "Applying VA39 patches (proot)..."
-  python3 - "$upstream_bin" "${upstream_bin}.va39" <<'PY'
-import sys, shutil, struct, pathlib
-src = pathlib.Path(sys.argv[1])
-dst = pathlib.Path(sys.argv[2])
-shutil.copyfile(src, dst)
-data = bytearray(dst.read_bytes())
-def get(off): return struct.unpack_from("<I", data, off)[0]
-def put(off, word): struct.pack_into("<I", data, off, word)
-
-lo, hi = 0, len(data)
-for off in range(lo, hi, 4):
-    w = get(off)
-    if (w & 0x7F800000) == 0x53000000:
-        immr, imms = (w >> 16) & 0x3F, (w >> 10) & 0x3F
-        if immr == 42 and imms == 44:
-            put(off, (w & ~((0x3F << 16) | (0x3F << 10))) | (35 << 16) | (37 << 10))
-        elif immr == 22 and imms == 21:
-            put(off, (w & ~((0x3F << 16) | (0x3F << 10))) | (29 << 16) | (28 << 10))
-for off in range(lo, hi - 4, 4):
-    if get(off) == 0x92D3800A and get(off + 4) == 0xF2E0000A:
-        put(off, 0x9280000A); put(off + 4, 0xD35DFD4A)
-for off in range(lo, hi, 4):
-    if get(off) == 0xF2E00029: put(off, 0xD3596129)
-word_rewrites = {
-    0xD2C20009: 0xD2C00409, 0xD2C2000A: 0xD2C0040A, 0xF2C20008: 0xF2DFF408,
-    0xF2C20009: 0xF2DFF409, 0xD2C10009: 0xD2C00209, 0xD2C1000A: 0xD2C0020A,
-    0xF2C38008: 0xF2DFF708, 0xF2C38009: 0xF2DFF709, 0x92560A6C: 0x925D0A6C,
-    0x92560A6A: 0x925D0A6A, 0xD2C3000D: 0xD2C0060D, 0xD2C3000C: 0xD2C0060C,
-    0xD2C08008: 0xD2C00108,
-}
-for off in range(lo, hi, 4):
-    w = get(off)
-    if w in word_rewrites: put(off, word_rewrites[w])
-for off in range(0, len(data) - 12, 4):
-    if get(off) == 0xAA1F03E5 and get(off + 4) == 0xAA1F03E6 and get(off + 8) == 0xD28036E0 and (get(off + 12) & 0xFC000000) == 0x94000000:
-        put(off + 8, 0xD2800600)
-dst.write_bytes(data)
-PY
-
-  chmod +x "${upstream_bin}.va39"
-  log_success "Antigravity CLI (proot-distro) updated"
-  return 0
+  # Karnel cannot create proot installs, so anything found here is state it
+  # does not own; refuse rather than report a misleading update path.
+  log_error "Antigravity CLI Proot update is unavailable: upstream has no verifiable artifact"
+  return 1
 }
 
 reinstall_antigravity_cli() {
