@@ -6,7 +6,7 @@ layout: base
 
 # Documentation Changelog
 
-## Unreleased
+## 4.17.44
 
 - **CLI correctness:** `karnel search` builds its catalog from tool READMEs in one pass instead of per-directory subshells; `karnel stats` counts modules that actually carry install markers and prints `not installed` instead of empty probes; `karnel open` gained routes for `doctor`, `brain`, `pg`, `init`, `env`, `backup`, `show`, `cleanup`, `supabase`, `linux`, `plugin`, `voice`, `security`, `osint`, `termux`, `termux-api` and `terms`.
 - **Confirmation safety:** `--auto` now takes the safe answer on destructive prompts instead of answering `y`, and the agent declines to run code unless `-y`/`AGENT_YES` says so explicitly; doctor's dangerous fixes require `-t 0` and a non-auto run.
@@ -15,6 +15,10 @@ layout: base
 - **Ownership and stats:** central ownership covers 96 of 166 tools (was 61), modules write install markers on success, and security installers keep their per-package ownership intact.
 - **Packaging:** `pack:check` normalizes modes from the git index on a real filesystem (shared storage masks every mode to 0660), asserts the CLI entry point ships executable, and `npm run release` publishes the validated tarball.
 - **Links and data safety:** Zork downloads over HTTP with pinned SHA-256 digests because the host's TLS does not validate; dead `karnelroute.online` references were dropped and GitHub Pages links now name the Vercel production site as canonical.
+- **Banner portability:** `banner.sh` keys its colour, figlet and tip tables as associative arrays so bash and zsh draw the same picture (zsh was losing the left border and shifting the gradient), resolves `KARNEL_VERSION` from `package.json` instead of always showing `v4.x`, draws the text logo as valid UTF-8 at the exact terminal width, caches per width for the `clear()` override, bounds the tip picker and restores the caller's traps.
+- **List coverage:** every group exposes the same `Install Flag`/`Status` columns, `karnel list plugins` is accepted, the TUI counts installers at runtime instead of advertising a stale `AI Tools (43)`, and dialog menus/checklists show the whole list (they used to render half and a third of it, which hid lower entries such as Walkie).
+- **Installer exit codes:** KeelCode and Supercode CLI now capture npm's exit status instead of a `rc` that was always zero, and repair the shebang only after a successful install.
+- **Regression tests:** `tests/list-coverage.sh` proves all 17 targets list all 166 installers, `tests/banner.sh` renders in bash and zsh at the exact width as valid UTF-8, and the site catalog is checked against the CLI registries.
 - **Housekeeping:** removed 11 unreferenced `.proot` wrapper templates, `gga/termux.patch`, `cline/helper/cline_helper.c` and `assets/banner/banner.txt`; restored 16 files deleted from the site worktree; `lint:shell` no longer depends on how the suite was invoked.
 
 ## 4.17.43

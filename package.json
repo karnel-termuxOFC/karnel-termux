@@ -1,6 +1,6 @@
 {
   "name": "karnel-termux",
-  "version": "4.17.43",
+  "version": "4.17.44",
   "description": "Modular Dev Environment for Termux — install languages, databases, AI agents, editors, and more with one command",
   "bin": {
     "karnel": "karnel/bin/karnel"
