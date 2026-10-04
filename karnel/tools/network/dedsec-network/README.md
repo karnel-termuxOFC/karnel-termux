@@ -4,7 +4,7 @@ Kit de ferramentas multifuncional de rede, OSINT e pentest
 
 **Pacote:** dedsec-network  
 **Autor:** israel marques  
-**Repositório:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repositório:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Oficial:** https://github.com/dedsec1121fk/DedSec  
 **Tipo:** Ferramenta de rede (Python)  
 **Licença:** MIT

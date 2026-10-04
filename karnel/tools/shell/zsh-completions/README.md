@@ -4,7 +4,7 @@ Additional ZSH completion definitions for various tools
 
 **Package:** zsh-completions  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/zsh-users/zsh-completions  
 **Type:** ZSH plugin (git clone)  
 **License:** BSD 3-Clause

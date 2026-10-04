@@ -4,7 +4,7 @@ Codex CLI is a coding agent from OpenAI that runs locally on your computer
 
 **Package:** codex  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/openai/codex
 **Type:** AI coding assistant (npm global package)
 **License:** MIT

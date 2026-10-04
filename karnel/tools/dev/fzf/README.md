@@ -4,7 +4,7 @@ General-purpose command-line fuzzy finder
 
 **Package:** fzf  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/junegunn/fzf  
 **Type:** Development tool (pkg)  
 **License:** MIT

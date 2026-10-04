@@ -4,7 +4,7 @@ Incremental bundler and build system optimized for JavaScript and TypeScript
 
 **Package:** turbopack  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Type:** Node.js global module (npm)  
 **License:** MIT
 

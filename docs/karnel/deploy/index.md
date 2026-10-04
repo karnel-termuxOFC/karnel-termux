@@ -12,6 +12,6 @@ Deploy CLIs (Railway, Netlify, Vercel, Supabase).
 | `deploy`  | `--vercel`, `--railway`, `--netlify`, `--supabase` |
 
 See the [CLI reference]({{ '/cli/' | relative_url }}#deploy) for the full command list, or the
-[source on GitHub](https://github.com/israelmarques1024-dotcom/karnel-termux/tree/main/karnel/modules/deploy.sh).
+[source on GitHub](https://github.com/karnel-termuxOFC/karnel-termux/tree/main/karnel/modules/deploy.sh).
 
 [← Back to docs]({{ '/' | relative_url }}) · [CLI reference]({{ '/cli/' | relative_url }})

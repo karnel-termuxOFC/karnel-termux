@@ -4,7 +4,7 @@ An open 45M-parameter model for tool calling, device use and structured extracti
 
 **Package:** cactus-needle  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/cactus-compute/needle  
 **Type:** Python tool-calling model CLI (glibc/JAX adaptation)  
 **License:** See official repository (MIT)

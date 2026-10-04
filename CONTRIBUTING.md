@@ -8,7 +8,7 @@ Seja respeitoso e construtivo. Projetos open source dependem de colaboração.
 
 ### Reportar Bugs
 
-Abra uma [issue](https://github.com/israelmarques1024-dotcom/karnel-termux/issues) com:
+Abra uma [issue](https://github.com/karnel-termuxOFC/karnel-termux/issues) com:
 
 - Versão do Karnel (`karnel --version`)
 - Passos para reproduzir
@@ -111,7 +111,7 @@ Quer que seu plugin apareça em `karnel plugin search`?
    declare-o em `path` na entrada do registry)
 3. Abra um PR adicionando seu repositório ao registry em:
 
-   `https://github.com/israelmarques1024-dotcom/karnel-plugins`
+   `https://github.com/karnel-termuxOFC/karnel-plugins`
 
 Formato da entrada:
 
@@ -132,7 +132,7 @@ Formato da entrada:
 
 O registry valida schema, unicidade, SemVer, repositório acessível, licença,
 manifesto, comandos e checksum. Consulte o README e a política de revisão do
-[`karnel-plugins`](https://github.com/israelmarques1024-dotcom/karnel-plugins)
+[`karnel-plugins`](https://github.com/karnel-termuxOFC/karnel-plugins)
 antes de abrir o PR.
 
 ## Pull Requests
@@ -170,7 +170,7 @@ karnel-termux/
 ## Ambiente de Desenvolvimento
 
 ```bash
-git clone https://github.com/israelmarques1024-dotcom/karnel-termux.git
+git clone https://github.com/karnel-termuxOFC/karnel-termux.git
 cd karnel-termux
 chmod +x karnel/bin/karnel
 export PATH="$PWD/karnel/bin:$PATH"

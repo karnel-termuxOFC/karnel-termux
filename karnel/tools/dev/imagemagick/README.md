@@ -4,7 +4,7 @@ Image manipulation and conversion suite
 
 **Package:** imagemagick  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://imagemagick.org  
 **Type:** Graphics tool (pkg)  
 **License:** ImageMagick License

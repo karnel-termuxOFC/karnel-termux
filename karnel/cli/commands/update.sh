@@ -213,10 +213,10 @@ _update_cleanup() {
 _update_release_commit() {
   local tag="$1" commit=""
   if command -v git &>/dev/null 2>&1; then
-    commit=$(git ls-remote "https://github.com/israelmarques1024-dotcom/karnel-termux.git" "refs/tags/${tag}^{}" 2>/dev/null | awk '{print $1}')
+    commit=$(git ls-remote "https://github.com/karnel-termuxOFC/karnel-termux.git" "refs/tags/${tag}^{}" 2>/dev/null | awk '{print $1}')
   fi
   if [[ -z "$commit" ]] && command -v curl &>/dev/null 2>&1; then
-    commit=$(curl -fsS -m 10 "https://api.github.com/repos/israelmarques1024-dotcom/karnel-termux/commits/${tag}" 2>/dev/null \
+    commit=$(curl -fsS -m 10 "https://api.github.com/repos/karnel-termuxOFC/karnel-termux/commits/${tag}" 2>/dev/null \
       | grep -m1 '"sha"' | sed -E 's/.*"sha":[[:space:]]*"([0-9a-f]{40})".*/\1/')
   fi
   [[ "$commit" =~ ^[0-9a-f]{40}$ ]] && echo "$commit"
@@ -233,7 +233,7 @@ _update_try_curl() {
   log_info "Trying the official curl installer..."
 
   if ! curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-    "https://api.github.com/repos/israelmarques1024-dotcom/karnel-termux/releases/latest" \
+    "https://api.github.com/repos/karnel-termuxOFC/karnel-termux/releases/latest" \
     -o "$meta"; then
     rm -f "$meta" "$installer" "$sumfile"
     return 1
@@ -247,10 +247,10 @@ _update_try_curl() {
   fi
 
   if ! curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-    "https://github.com/israelmarques1024-dotcom/karnel-termux/releases/download/$tag/karnel-termux-install.sh.sha256" \
+    "https://github.com/karnel-termuxOFC/karnel-termux/releases/download/$tag/karnel-termux-install.sh.sha256" \
     -o "$sumfile" ||
     ! curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-    "https://github.com/israelmarques1024-dotcom/karnel-termux/releases/download/$tag/karnel-termux-install.sh" \
+    "https://github.com/karnel-termuxOFC/karnel-termux/releases/download/$tag/karnel-termux-install.sh" \
     -o "$installer"; then
     rm -f "$meta" "$installer" "$sumfile"
     return 1
@@ -421,7 +421,7 @@ _update_karnel_repo() {
 
   origin=$(git -C "$repo_dir" remote get-url origin 2>/dev/null) || return 1
   case "${origin%.git}" in
-    https://github.com/israelmarques1024-dotcom/karnel-termux|git@github.com:israelmarques1024-dotcom/karnel-termux) ;;
+    https://github.com/karnel-termuxOFC/karnel-termux|https://github.com/israelmarques1024-dotcom/karnel-termux|git@github.com:karnel-termuxOFC/karnel-termux|git@github.com:israelmarques1024-dotcom/karnel-termux) ;;
     *) log_error "Refusing git update from an untrusted origin: $origin"; return 1 ;;
   esac
   if [[ -n "$(git -C "$repo_dir" status --porcelain --untracked-files=all 2>/dev/null)" ]]; then

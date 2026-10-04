@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/israelmarques1024-dotcom/karnel-termux.git"
+    "url": "git+https://github.com/karnel-termuxOFC/karnel-termux.git"
   },
   "keywords": [
     "termux",
@@ -44,7 +44,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/israelmarques1024-dotcom/karnel-termux/issues"
+    "url": "https://github.com/karnel-termuxOFC/karnel-termux/issues"
   },
   "homepage": "https://karneltermux.vercel.app"
 }

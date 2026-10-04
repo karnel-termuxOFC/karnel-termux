@@ -4,7 +4,7 @@ Terminal coding agent powered by Kimchi's multi-model orchestration by CAST AI.
 
 **Package:** kimchi-code  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/getkimchi/kimchi  
 **Type:** AI coding agent (Binary download)  
 **License:** MIT

@@ -4,7 +4,7 @@ Typed superset of JavaScript that compiles to plain JavaScript
 
 **Package:** typescript  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://www.typescriptlang.org  
 **Type:** Node.js global module (npm)  
 **License:** Apache 2.0

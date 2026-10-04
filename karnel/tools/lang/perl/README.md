@@ -4,7 +4,7 @@ Highly capable, feature-rich programming language
 
 **Package:** perl  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://www.perl.org  
 **Type:** Language (pkg)  
 **License:** Artistic License 2.0 / GPL

@@ -4,7 +4,7 @@ Secure tunnel to expose local servers to the internet
 
 **Package:** ngrok  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://ngrok.com  
 **Type:** Node.js global module (npm)  
 **License:** Apache 2.0 (ngrok itself has proprietary components)

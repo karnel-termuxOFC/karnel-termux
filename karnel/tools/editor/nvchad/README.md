@@ -4,7 +4,7 @@ Modern Neovim configuration with preconfigured plugins
 
 **Package:** nvchad (configuration)  
 **Author:** israel  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux
 **Official:** https://github.com/NvChad/starter
 **Type:** Code editor configuration (git clone)  
 **License:** MIT

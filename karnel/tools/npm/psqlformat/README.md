@@ -4,7 +4,7 @@ PostgreSQL query formatter
 
 **Package:** psqlformat  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://www.npmjs.com/package/psqlformat
 **Type:** Node.js global module (npm)  
 **License:** MIT

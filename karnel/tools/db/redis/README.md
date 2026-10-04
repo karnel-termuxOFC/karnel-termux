@@ -4,7 +4,7 @@ In-memory data structure store used as database, cache, and message broker
 
 **Package:** redis  
 **Author:** israel  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux
 **Official:** https://github.com/redis/redis
 **Type:** Database (pkg)  
 **License:** BSD-3-Clause

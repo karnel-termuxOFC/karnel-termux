@@ -4,7 +4,7 @@ Terminal UI manipulation utilities
 
 **Package:** ncurses-utils  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://invisible-island.net/ncurses  
 **Type:** System tool (pkg)  
 **License:** MIT

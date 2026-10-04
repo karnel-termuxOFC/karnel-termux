@@ -4,7 +4,7 @@ Auto-close and delete matching parentheses and quotes
 
 **Package:** zsh-autopair  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/hlissner/zsh-autopair  
 **Type:** ZSH plugin (git clone)  
 **License:** MIT

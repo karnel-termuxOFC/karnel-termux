@@ -4,7 +4,7 @@ Google's AI assistant with Gemini
 
 **Package:** @google/gemini-cli  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/google-gemini/gemini-cli  
 **Type:** AI CLI assistant (npm global package)  
 **License:** MIT

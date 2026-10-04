@@ -40,7 +40,7 @@ Create an npm **granular access token** with:
 - **Permissions**: Automation (Bypass 2FA)
 
 Save it as the `NPM_TOKEN` Actions secret in the
-`israelmarques1024-dotcom/karnel-termux` repository. Never paste a token into
+`karnel-termuxOFC/karnel-termux` repository. Never paste a token into
 issues, chat, shell history, or screenshots. If a token is ever exposed,
 revoke it immediately at https://www.npmjs.com/settings/<user>/tokens.
 
@@ -58,7 +58,7 @@ the Vercel production site, `https://karneltermux.vercel.app`. The `Publish Docs
 workflow (`.github/workflows/docs.yml`) runs `actions/jekyll-build-pages` on
 every push to `main` that changes `docs/**`, uploads the result as a Pages
 artifact and deploys it to the `github-pages` environment; that mirror,
-`https://israelmarques1024-dotcom.github.io/karnel-termux/`, is served only
+`https://karnel-termuxOFC.github.io/karnel-termux/`, is served only
 while GitHub Pages is enabled for the repository.
 
 If a build fails, open the Actions run for the failing job and read the Jekyll

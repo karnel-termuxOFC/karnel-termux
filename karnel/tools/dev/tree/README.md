@@ -4,7 +4,7 @@ Recursive directory listing in a tree-like format
 
 **Package:** tree  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://oldmanprogrammer.net/source.php?dir=projects/tree  
 **Type:** Utility tool (pkg)  
 **License:** GPL-2.0

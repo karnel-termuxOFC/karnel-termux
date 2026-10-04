@@ -4,7 +4,7 @@ Convert HTML documents to plain text
 
 **Package:** html2text  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/grobian/html2text  
 **Type:** Utility tool (pkg)  
 **License:** GPL-2.0

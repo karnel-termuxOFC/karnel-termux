@@ -4,7 +4,7 @@ AI-powered coding assistant that runs in your terminal
 
 **Package:** supercode-cli  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Type:** AI coding CLI (npm package)  
 
 ## Description

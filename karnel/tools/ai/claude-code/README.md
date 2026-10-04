@@ -4,7 +4,7 @@ Anthropic's CLI tool with Claude AI
 
 **Package:** claude-code  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/anthropics/claude-code  
 **Type:** AI coding assistant (Binary + glibc bootstrapper)  
 **License:** MIT

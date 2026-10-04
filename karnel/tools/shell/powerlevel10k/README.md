@@ -4,7 +4,7 @@ Modern and fast ZSH theme with customizable prompts
 
 **Package:** powerlevel10k  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/romkatv/powerlevel10k  
 **Type:** ZSH plugin (git clone)  
 **License:** MIT

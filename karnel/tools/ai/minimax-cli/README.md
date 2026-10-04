@@ -4,7 +4,7 @@ Generate text, images, video, speech, and music from the terminal
 
 **Package:** mmx-cli  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/MiniMax-AI/cli  
 **Type:** AI CLI tool (npm global package)  
 **License:** MIT

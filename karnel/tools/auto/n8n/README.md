@@ -4,7 +4,7 @@ Workflow automation tool for connecting services
 
 **Package:** n8n  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://n8n.io  
 **Type:** Automation tool (npm global package)  
 **License:** Sustainable Use License (fair-code)

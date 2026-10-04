@@ -4,7 +4,7 @@ Shell script formatter with POSIX and Bash support
 
 **Package:** shfmt  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/mvdan/sh  
 **Type:** Development tool (pkg)  
 **License:** BSD 3-Clause

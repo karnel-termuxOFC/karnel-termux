@@ -4,7 +4,7 @@ LLVM C/C++ compiler for systems programming
 
 **Package:** clang  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://clang.llvm.org  
 **Type:** Language compiler (pkg)  
 **License:** Apache 2.0 with LLVM Exceptions

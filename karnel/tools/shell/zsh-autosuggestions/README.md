@@ -4,7 +4,7 @@ Fish-like autosuggestions for ZSH
 
 **Package:** zsh-autosuggestions  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/zsh-users/zsh-autosuggestions  
 **Type:** ZSH plugin (git clone)  
 **License:** MIT

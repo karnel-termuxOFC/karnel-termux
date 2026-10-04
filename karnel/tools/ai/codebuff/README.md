@@ -4,7 +4,7 @@ A 100% free coding agent, right from your terminal
 
 **Package:** codebuff
 **Author:** israel marques
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux
 **Official:** https://codebuff.com
 **Releases:** https://github.com/CodebuffAI/codebuff
 **Type:** AI coding agent (Binary + glibc bootstrapper)

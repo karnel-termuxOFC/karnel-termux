@@ -4,7 +4,7 @@ Opinionated code formatter supporting multiple languages
 
 **Package:** prettier  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://prettier.io  
 **Type:** Node.js global module (npm)  
 **License:** MIT

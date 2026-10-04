@@ -4,7 +4,7 @@ Deploy frontend applications and serverless functions
 
 **Package:** vercel  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://vercel.com/docs/cli  
 **Type:** Node.js global module (npm)  
 **License:** Apache 2.0

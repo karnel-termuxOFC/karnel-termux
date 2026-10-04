@@ -4,7 +4,7 @@
 
 **Package:** omni-route (npm: karnelroute)  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **npm:** https://www.npmjs.com/package/karnelroute  
 **Type:** AI Gateway (npm package with smart wrapper)  
 **License:** MIT

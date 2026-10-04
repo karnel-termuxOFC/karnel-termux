@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/israelmarques1024-dotcom/karnel-termux/main/assets/images/karnel-logo.png" alt="Karnel Termux Logo" width="400">
+  <img src="https://raw.githubusercontent.com/karnel-termuxOFC/karnel-termux/main/assets/images/karnel-logo.png" alt="Karnel Termux Logo" width="400">
 </p>
 
 <p align="center">
@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux">
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux">
     <img src="https://img.shields.io/badge/version-4.17.44-0078D4?style=for-the-badge" alt="Version">
   </a>
   <a href="https://www.npmjs.com/package/karnel-termux">
@@ -16,7 +16,7 @@
   <a href="https://www.npmjs.com/package/karnel-termux">
   <img src="https://img.shields.io/npm/dt/karnel-termux?style=for-the-badge&logo=npm&color=cb3837" alt="npm downloads">
 </a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/LICENSE">
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-0078D4?style=for-the-badge" alt="License">
   </a>
   <a href="https://termux.dev/">
@@ -80,7 +80,7 @@ Why it's great:
 ```bash
 version=4.17.44
 tmpdir=$(mktemp -d) && trap 'rm -rf "$tmpdir"' EXIT
-base="https://github.com/israelmarques1024-dotcom/karnel-termux/releases/download/v$version"
+base="https://github.com/karnel-termuxOFC/karnel-termux/releases/download/v$version"
 curl -fsSL "$base/karnel-termux-install.sh" -o "$tmpdir/karnel-termux-install.sh"
 curl -fsSL "$base/karnel-termux-install.sh.sha256" -o "$tmpdir/karnel-termux-install.sh.sha256"
 (cd "$tmpdir" && sha256sum -c karnel-termux-install.sh.sha256) && bash "$tmpdir/karnel-termux-install.sh" --ref "v$version"
@@ -250,7 +250,7 @@ optional checksum, and informational capabilities. Native command names and
 plugin-to-plugin command collisions are rejected.
 
 The installed plugin directory is `${XDG_DATA_HOME:-$HOME/.local/share}/karnel-data/plugins`.
-See the [official plugin registry](https://github.com/israelmarques1024-dotcom/karnel-plugins)
+See the [official plugin registry](https://github.com/karnel-termuxOFC/karnel-plugins)
 for schemas, review policy, and safe publication requirements.
 
 ## AI CLIs
@@ -408,7 +408,7 @@ definitions across 68 distinct tool labels. It detects subprojects, executes
 checks in the matching project or subproject directory, preserves command exit status, and writes
 timestamped text reports under `$KARNEL_DATA/doctor_code_reports/`.
 
-Read the **[complete Doctor reference](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/doctor/index.md)** for modes,
+Read the **[complete Doctor reference](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/doctor/index.md)** for modes,
 supported ecosystems, tool coverage, JSON schema, reports, and auto-fix safety.
 
 ---
@@ -565,12 +565,12 @@ Documentation loads from https://karneltermux.vercel.app.
 
 ## Documentation
 
-- [Documentation index](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/index.md)
-- [CLI reference](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/cli/index.md)
-- [Doctor reference](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/doctor/index.md)
-- [Troubleshooting](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/troubleshooting/index.md)
-- [Architecture](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/ARCHITECTURE/index.md)
-- [Documentation changelog](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/docs/CHANGELOG.md)
+- [Documentation index](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/index.md)
+- [CLI reference](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/cli/index.md)
+- [Doctor reference](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/doctor/index.md)
+- [Troubleshooting](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/troubleshooting/index.md)
+- [Architecture](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/ARCHITECTURE/index.md)
+- [Documentation changelog](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/docs/CHANGELOG.md)
 - [Official website](https://karneltermux.vercel.app)
 
 ---

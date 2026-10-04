@@ -4,7 +4,7 @@ Gere sites simples pelo terminal
 
 **Pacote:** websites  
 **Autor:** israel marques  
-**Repositório:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repositório:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Oficial:** https://github.com/dedsec1121fk/DedSec  
 **Tipo:** Utilitário (Python)  
 **Licença:** MIT

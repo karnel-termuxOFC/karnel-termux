@@ -90,7 +90,7 @@ check_for_updates() {
     fi
     if ! _valid_semver "$remote_version"; then
       remote_version=""
-      if remote_output=$(curl -fsSL --max-time 5 "https://raw.githubusercontent.com/israelmarques1024-dotcom/karnel-termux/main/package.json" 2>/dev/null); then
+      if remote_output=$(curl -fsSL --max-time 5 "https://raw.githubusercontent.com/karnel-termuxOFC/karnel-termux/main/package.json" 2>/dev/null); then
         remote_version=$(printf '%s\n' "$remote_output" | sed -nE 's/^[[:space:]]*"version":[[:space:]]*"([^"]+)".*/\1/p' | head -1)
       fi
     fi

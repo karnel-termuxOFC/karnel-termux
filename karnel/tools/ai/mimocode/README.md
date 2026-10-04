@@ -4,7 +4,7 @@ Xiaomi's AI coding agent — fast, local, and open-source
 
 **Package:** mimocode  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/XiaomiMiMo/MiMo-Code  
 **Type:** AI coding agent (Binary + glibc bootstrapper)  
 **License:** MIT

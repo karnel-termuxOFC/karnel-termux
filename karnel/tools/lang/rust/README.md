@@ -4,7 +4,7 @@ Systems programming language with memory safety guarantees
 
 **Package:** rust  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://www.rust-lang.org  
 **Type:** Language (pkg)  
 **License:** MIT / Apache 2.0

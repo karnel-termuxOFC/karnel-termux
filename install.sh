@@ -11,7 +11,7 @@ readonly P_FAIL='\e[1;31m'
 readonly P_HL='\e[38;5;213m'
 readonly P_NC='\e[0m'
 
-REPO="https://github.com/israelmarques1024-dotcom/karnel-termux"
+REPO="https://github.com/karnel-termuxOFC/karnel-termux"
 BRANCH="main"
 RELEASE_REF=""
 INSTALL_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

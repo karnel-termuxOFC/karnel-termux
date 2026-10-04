@@ -4,7 +4,7 @@ Jogos clássicos de aventura em texto — Zork I, II e III
 
 **Pacote:** zork  
 **Autor:** israel marques  
-**Repositório:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repositório:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Oficial:** http://www.infocom-if.org  
 **Tipo:** Utilitário (frotz)  
 **Licença:** MIT

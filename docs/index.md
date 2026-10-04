@@ -37,11 +37,11 @@ Open its docs with `karnel open herdr`.
   <a href="./cli/">CLI Commands — full reference for every <code>karnel</code> subcommand</a>
   <a href="./doctor/">Doctor System — environment checks and the code-analysis engine</a>
   <a href="./troubleshooting/">Troubleshooting — common issues and fixes</a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/osint/robin/README.md">Robin OSINT — responsible use, lifecycle, data locations</a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/network/dark/README.md">Network Tools — dark, dedsec-network</a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/ai/keelcode/README.md">KeelCode — hosted coding-agent CLI</a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/utils/superfile/README.md">SuperFile — terminal file manager</a>
-  <a href="https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/utils/fconv/README.md">Utility Scripts — fconv, notes, treex, and more</a>
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/osint/robin/README.md">Robin OSINT — responsible use, lifecycle, data locations</a>
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/network/dark/README.md">Network Tools — dark, dedsec-network</a>
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/ai/keelcode/README.md">KeelCode — hosted coding-agent CLI</a>
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/utils/superfile/README.md">SuperFile — terminal file manager</a>
+  <a href="https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/utils/fconv/README.md">Utility Scripts — fconv, notes, treex, and more</a>
   <a href="./cli/#supabase--remote-project-helpers">Supabase CLI — remote-project helpers</a>
   <a href="./CHANGELOG/">Changelog — version history and fixes</a>
 </div>

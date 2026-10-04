@@ -349,7 +349,7 @@ karnel robin doctor --network
 karnel robin purge-data --yes
 ```
 
-See the [Robin reference](https://github.com/israelmarques1024-dotcom/karnel-termux/blob/main/karnel/tools/osint/robin/README.md) for detailed
+See the [Robin reference](https://github.com/karnel-termuxOFC/karnel-termux/blob/main/karnel/tools/osint/robin/README.md) for detailed
 lifecycle, data locations, and troubleshooting.
 
 ---

@@ -4,7 +4,7 @@ Cliente de API HTTP interativo para o terminal
 
 **Pacote:** httptmux  
 **Autor:** israel marques  
-**Repositório:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repositório:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Oficial:** https://www.npmjs.com/package/httptmux  
 **Tipo:** Utilitário (npm)  
 **Licença:** MIT

@@ -4,7 +4,7 @@ SSH server and client for secure remote access
 
 **Package:** openssh  
 **Author:** israel  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux
 **Official:** https://www.openssh.com  
 **Type:** Development tool (pkg)  
 **License:** BSD

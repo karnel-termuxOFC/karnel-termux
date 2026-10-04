@@ -4,7 +4,7 @@ Terminal multiplexer for managing multiple sessions
 
 **Package:** tmux  
 **Author:** israel  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux
 **Official:** https://github.com/tmux/tmux  
 **Type:** Development tool (pkg)  
 **License:** ISC

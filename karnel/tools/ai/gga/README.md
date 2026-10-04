@@ -4,7 +4,7 @@ Provider-agnostic AI code review on every commit
 
 **Package:** gga  
 **Author:** Gentleman-Programming  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://github.com/Gentleman-Programming/gentleman-guardian-angel  
 **Type:** AI code review CLI (Pure Bash)  
 **License:** MIT

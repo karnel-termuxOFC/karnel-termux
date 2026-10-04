@@ -16,6 +16,6 @@ and tracked with Karnel ownership markers so `karnel uninstall utils --herdr` is
 | `utils`   | `--fconv`, `--filecheck`, `--websites`, `--notes`, `--treex`, `--passman`, `--applaunch`, `--splash`, `--httptmux`, `--zork`, `--qrcode`, `--superfile`, `--herdr` |
 
 See the [CLI reference]({{ '/cli/' | relative_url }}#utils) for the full command list, or the
-[source on GitHub](https://github.com/israelmarques1024-dotcom/karnel-termux/tree/main/karnel/modules/utils.sh).
+[source on GitHub](https://github.com/karnel-termuxOFC/karnel-termux/tree/main/karnel/modules/utils.sh).
 
 [← Back to docs]({{ '/' | relative_url }}) · [CLI reference]({{ '/cli/' | relative_url }})

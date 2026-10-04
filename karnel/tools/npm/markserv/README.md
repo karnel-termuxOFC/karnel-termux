@@ -4,7 +4,7 @@ Markdown live-preview server
 
 **Package:** markserv  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://www.npmjs.com/package/markserv
 **Type:** Node.js global module (npm)  
 **License:** MIT

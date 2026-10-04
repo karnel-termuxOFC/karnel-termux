@@ -4,7 +4,7 @@ Lightweight and flexible command-line JSON processor
 
 **Package:** jq  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://jqlang.org  
 **Type:** Development tool (pkg)  
 **License:** MIT

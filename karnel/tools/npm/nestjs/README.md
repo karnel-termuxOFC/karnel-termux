@@ -4,7 +4,7 @@ Progressive Node.js framework for building efficient, reliable applications
 
 **Package:** @nestjs/cli  
 **Author:** israel marques  
-**Repository:** https://github.com/israelmarques1024-dotcom/karnel-termux  
+**Repository:** https://github.com/karnel-termuxOFC/karnel-termux  
 **Official:** https://nestjs.com  
 **Type:** Node.js global module (npm)  
 **License:** MIT
