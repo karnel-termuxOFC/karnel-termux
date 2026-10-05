@@ -136,6 +136,25 @@ _validate_tool_installed() {
 
 # ---- FUNÇÕES DE LOTE ----
 
+# Runs the Android compatibility layer over the binaries an AI tool puts on
+# PATH. glibc-only binaries cannot be exec'd here - their PT_INTERP points at
+# /lib/ld-linux-*.so.1, which Android does not have - until compat wraps them.
+_ai_tool_compat_adapt() {
+  local id="$1" entry entry_id name bins
+  local -a bin_list=()
+  declare -f compat_adapt_installed >/dev/null 2>&1 || return 0
+  for entry in "${AI_TOOLS_REGISTRY[@]}"; do
+    IFS=':' read -r entry_id name bins <<<"$entry"
+    [[ "$entry_id" == "$id" ]] || continue
+    IFS=',' read -ra bin_list <<<"$bins"
+    for entry_id in "${bin_list[@]}"; do
+      compat_adapt_installed "$entry_id" || true
+    done
+    break
+  done
+  return 0
+}
+
 _ai_tool_registered() {
   local wanted="$1"
   local entry id
@@ -184,13 +203,21 @@ _run_ai_tool_action() {
 
   if [[ "$action" != "reinstall" ]]; then
     declare -f "$func_name" &>/dev/null || return 127
-    "$func_name"
-    return $?
+    local rc=0
+    "$func_name" || rc=$?
+    if (( rc == 0 || rc == 2 )) && [[ "$action" == "install" || "$action" == "update" ]]; then
+      _ai_tool_compat_adapt "$id"
+    fi
+    return "$rc"
   fi
 
   if declare -f "$func_name" &>/dev/null; then
-    "$func_name"
-    return $?
+    local rc=0
+    "$func_name" || rc=$?
+    if (( rc == 0 )); then
+      _ai_tool_compat_adapt "$id"
+    fi
+    return "$rc"
   fi
 
   local uninstall_fn="uninstall_${id//-/_}"

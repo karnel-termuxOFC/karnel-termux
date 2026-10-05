@@ -4,6 +4,7 @@ import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/colors"
 import "@/utils/tools"
+import "@/utils/compat"
 
 update_main() {
 

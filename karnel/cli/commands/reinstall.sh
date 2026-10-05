@@ -3,6 +3,7 @@
 import "@/utils/log"
 import "@/utils/colors"
 import "@/utils/tools"
+import "@/utils/compat"
 
 reinstall_main() {
 

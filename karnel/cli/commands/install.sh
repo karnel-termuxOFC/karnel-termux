@@ -3,6 +3,7 @@
 import "@/utils/log"
 import "@/utils/colors"
 import "@/utils/tools"
+import "@/utils/compat"
 
 install_main() {
 
@@ -244,6 +245,10 @@ _install_specific_tools() {
               fi
             done
             if [ -n "$found_bin" ]; then
+              for _bin in "${_bin_list[@]}"; do
+                declare -f compat_adapt_installed >/dev/null 2>&1 &&
+                  compat_adapt_installed "$_bin" || true
+              done
               ((installed_count++))
             else
               log_warn "$tool: binary not found in PATH after installation"

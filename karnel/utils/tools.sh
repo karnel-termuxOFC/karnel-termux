@@ -148,6 +148,9 @@ _run_tool_lifecycle_action() {
     if (( rc == 0 && protected )); then
       _mark_tool_owned "$module" "$tool" || return 1
     fi
+    if (( rc == 0 )); then
+      _tool_compat_adapt "$tool"
+    fi
     return "$rc"
   fi
 
@@ -164,7 +167,19 @@ _run_tool_lifecycle_action() {
       rm -f "$marker" || return 1
     fi
   fi
+  if (( rc == 0 )) && [[ "$action" == "install" || "$action" == "update" ]]; then
+    _tool_compat_adapt "$tool"
+  fi
   return "$rc"
+}
+
+# Runs the Android compatibility layer over a tool that was just installed or
+# updated, when the layer has been imported. glibc-only binaries cannot be
+# exec'd on Android (their PT_INTERP does not exist) until they are wrapped.
+_tool_compat_adapt() {
+  declare -f compat_adapt_installed >/dev/null 2>&1 || return 0
+  compat_adapt_installed "$1" || true
+  return 0
 }
 
 _register_safe_reinstall_handlers() {

@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+TEST_ROOT=$(mktemp -d)
+trap 'rm -rf "$TEST_ROOT"' EXIT
+SYSTEM_RM=$(command -v rm)
+SYSTEM_HEAD=$(command -v head)
+
+pass=0
+failed=0
+
+run_test() {
+  local name="$1"
+  shift
+  local rc=0 errexit_was_on=0
+  [[ $- == *e* ]] && errexit_was_on=1
+  set +e
+  ( set -e; "$@" )
+  rc=$?
+  if ((errexit_was_on)); then set -e; fi
+  if ((rc == 0)); then
+    ((pass += 1))
+    printf 'ok - %s\n' "$name"
+  else
+    ((failed += 1))
+    printf 'not ok - %s\n' "$name" >&2
+  fi
+}
+
+# Fabricates a Termux-shaped prefix and a glibc sysroot so the layer can be
+# exercised without a real glibc. The ELF predicates are then overridden to
+# classify the fixtures by file name, which keeps the test portable across
+# bionic (Termux) and glibc (CI) hosts; detection itself is covered separately
+# by assert_detection_matches_readelf.
+setup_compat_env() {
+  local bash_bin suffix
+  bash_bin="$(command -v bash)"
+  # Every assertion runs in its own subshell, so BASHPID keeps one test's
+  # wrappers and .karnel-real files out of the next test's fixture set.
+  suffix="${BASHPID:-$$}"
+  export PREFIX="$TEST_ROOT/prefix-$suffix"
+  export KARNEL_GLIBC_ROOT="$TEST_ROOT/sysroot-$suffix"
+  export PATH="$PREFIX/bin:$PATH"
+  mkdir -p "$PREFIX/bin" "$KARNEL_GLIBC_ROOT/lib"
+
+  {
+    printf '%s\n' "#!$bash_bin"
+    printf '%s\n' "# fake glibc loader: --library-path <path> <binary> [args...]"
+    printf '%s\n' '[[ "${1:-}" == "--library-path" ]] && shift 2'
+    printf '%s\n' 'exec "$@"'
+  } >"$KARNEL_GLIBC_ROOT/lib/ld-linux-aarch64.so.1"
+  chmod +x "$KARNEL_GLIBC_ROOT/lib/ld-linux-aarch64.so.1"
+  : >"$KARNEL_GLIBC_ROOT/lib/libc.so.6"
+
+  # shellcheck source=../karnel/utils/compat.sh
+  source "$ROOT_DIR/karnel/utils/compat.sh"
+  log_info() { :; }
+  log_error() { :; }
+
+  compat_is_elf() { [[ "$(basename -- "$1")" == *fake-elf ]]; }
+  compat_is_glibc_elf() { [[ "$(basename -- "$1")" == *glibc-fake-elf ]]; }
+
+  # A "glibc ELF" that is really an executable shell script, so the generated
+  # wrapper can be run and observed end to end. It resolves bash itself: this
+  # helper is called from scopes that do not see setup_compat_env's locals.
+  make_glibc_tool() {
+    local path="$1"
+    {
+      printf '%s\n' "#!$(command -v bash)"
+      printf '%s\n' 'printf "ran:%s\n" "$*"'
+    } >"$path"
+    chmod +x "$path"
+  }
+}
+
+assert_classify() (
+  setup_compat_env
+  make_glibc_tool "$PREFIX/bin/alpha.glibc-fake-elf"
+  make_glibc_tool "$PREFIX/bin/beta.native-fake-elf"
+  printf '%s\n' '#!/bin/sh' 'echo hi' >"$PREFIX/bin/gamma.sh"
+  printf '%s\n' 'plain text' >"$PREFIX/bin/delta.txt"
+
+  [[ "$(compat_classify "$PREFIX/bin/alpha.glibc-fake-elf")" == "glibc" ]]
+  [[ "$(compat_classify "$PREFIX/bin/beta.native-fake-elf")" == "native" ]]
+  [[ "$(compat_classify "$PREFIX/bin/gamma.sh")" == "script" ]]
+  [[ "$(compat_classify "$PREFIX/bin/delta.txt")" == "unknown" ]]
+  [[ "$(compat_classify "$PREFIX/bin/nope")" == "missing" ]]
+)
+
+assert_loader_is_found_in_the_sysroot() (
+  setup_compat_env
+  compat_glibc_ready
+  [[ "$(compat_glibc_loader)" == "$KARNEL_GLIBC_ROOT/lib/ld-linux-aarch64.so.1" ]]
+)
+
+assert_wrap_runs_and_is_reversible() (
+  setup_compat_env
+  local tool="$PREFIX/bin/alpha.glibc-fake-elf"
+  make_glibc_tool "$tool"
+
+  compat_wrap "$tool"
+  [[ -f "$tool" ]]
+  [[ -f "$tool.karnel-real" ]]
+  head -n 2 "$tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
+
+  # The wrapper really executes the binary through the loader.
+  local out
+  out="$("$tool" one two)"
+  [[ "$out" == "ran:one two" ]]
+
+  compat_unwrap "$tool"
+  [[ ! -f "$tool.karnel-real" ]]
+  [[ -f "$tool" ]]
+  ! head -n 2 "$tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
+)
+
+assert_wrap_is_idempotent() (
+  setup_compat_env
+  local tool="$PREFIX/bin/alpha.glibc-fake-elf"
+  make_glibc_tool "$tool"
+
+  compat_wrap "$tool"
+  local first
+  first="$("$SYSTEM_HEAD" -n 20 "$tool")"
+  # A second wrap must not stack another layer or move the real binary again.
+  compat_wrap "$tool"
+  [[ "$(head -n 20 "$tool")" == "$first" ]]
+  [[ -f "$tool.karnel-real" ]]
+  [[ ! -f "$tool.karnel-real.karnel-real" ]]
+)
+
+assert_adapt_only_touches_glibc() (
+  setup_compat_env
+  local glibc_tool="$PREFIX/bin/alpha.glibc-fake-elf"
+  local native_tool="$PREFIX/bin/beta.native-fake-elf"
+  local script="$PREFIX/bin/gamma"
+  make_glibc_tool "$glibc_tool"
+  make_glibc_tool "$native_tool"
+  printf '%s\n' '#!/bin/sh' 'echo hi' >"$script"
+  chmod +x "$script"
+
+  compat_adapt_installed "alpha.glibc-fake-elf"
+  compat_adapt_installed "beta.native-fake-elf"
+  compat_adapt_installed "gamma"
+
+  head -n 2 "$glibc_tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
+  [[ ! -e "$glibc_tool.karnel-real" || -f "$glibc_tool.karnel-real" ]]
+  [[ -f "$glibc_tool.karnel-real" ]]
+  ! head -n 2 "$native_tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
+  [[ ! -e "$native_tool.karnel-real" ]]
+  ! head -n 2 "$script" | grep -qF "$COMPAT_WRAPPER_MARKER"
+  # Adapting something that is not on PATH is a no-op, never a failure.
+  compat_adapt_installed "definitely-not-installed"
+)
+
+assert_describe_names_a_wrapper() (
+  setup_compat_env
+  local tool="$PREFIX/bin/alpha.glibc-fake-elf"
+  make_glibc_tool "$tool"
+  [[ "$(compat_describe "$tool")" == "glibc" ]]
+  compat_wrap "$tool"
+  [[ "$(compat_describe "$tool")" == "glibc (wrapped, runs through the glibc loader)" ]]
+  [[ "$(compat_describe "$PREFIX/bin/missing")" == "missing" ]]
+)
+
+assert_fix_shebang_rewrites_env_interpreter() (
+  setup_compat_env
+  local bash_bin target
+  bash_bin="$(command -v bash)"
+  target="$TEST_ROOT/tool-entry"
+  # Android has no /usr/bin/env, so this shebang cannot run here.
+  printf '%s\n' '#!/usr/bin/env bash' 'echo hi' >"$target"
+  chmod +x "$target"
+
+  compat_fix_shebang "$target"
+  [[ "$(head -n 1 "$target")" == "#!$bash_bin" ]]
+  # 2 = already runnable, and the file must not be rewritten twice.
+  local rc=0
+  compat_fix_shebang "$target" || rc=$?
+  [[ "$rc" -eq 2 ]]
+  [[ "$(head -n 1 "$target")" == "#!$bash_bin" ]]
+)
+
+assert_fix_shebang_keeps_interpreter_arguments() (
+  setup_compat_env
+  local bash_bin target
+  bash_bin="$(command -v bash)"
+  target="$TEST_ROOT/tool-entry-args"
+  printf '%s\n' '#!/usr/bin/env bash -e' 'echo hi' >"$target"
+  chmod +x "$target"
+
+  compat_fix_shebang "$target"
+  [[ "$(head -n 1 "$target")" == "#!$bash_bin -e" ]]
+)
+
+assert_fix_shebang_gives_up_on_unknown_interpreters() (
+  setup_compat_env
+  local target rc=0
+  target="$TEST_ROOT/tool-entry-unknown"
+  printf '%s\n' '#!/nonexistent/interp-xyz' 'echo hi' >"$target"
+  chmod +x "$target"
+
+  compat_fix_shebang "$target" || rc=$?
+  [[ "$rc" -eq 1 ]]
+  [[ "$(head -n 1 "$target")" == '#!/nonexistent/interp-xyz' ]]
+)
+
+assert_fix_shebangs_counts_only_changes() (
+  setup_compat_env
+  local dir="$TEST_ROOT/shebangs-${BASHPID:-$$}"
+  mkdir -p "$dir"
+  printf '%s\n' '#!/usr/bin/env bash' 'echo a' >"$dir/a.sh"
+  printf '%s\n' '#!/usr/bin/env bash' 'echo b' >"$dir/b.sh"
+  printf '%s\n' 'not a script' >"$dir/c.txt"
+  chmod +x "$dir/a.sh" "$dir/b.sh"
+
+  local fixed
+  fixed="$(compat_fix_shebangs "$dir")"
+  [[ "$fixed" == "2" ]]
+  # A second pass changes nothing.
+  [[ "$(compat_fix_shebangs "$dir")" == "0" ]]
+)
+
+assert_detection_matches_readelf() (
+  setup_compat_env
+  command -v cc >/dev/null 2>&1 || return 0
+  command -v readelf >/dev/null 2>&1 || return 0
+
+  # Undo the fixture stubs: this case checks the real ELF classifier.
+  unset -f compat_is_elf compat_is_glibc_elf
+  # shellcheck source=../karnel/utils/compat.sh
+  source "$ROOT_DIR/karnel/utils/compat.sh"
+
+  local src="$TEST_ROOT/probe.c" bin="$TEST_ROOT/probe" needed
+  printf '%s\n' 'int main(void){return 0;}' >"$src"
+  if ! cc -o "$bin" "$src" >/dev/null 2>&1; then
+    return 0
+  fi
+  [[ -f "$bin" ]] || return 0
+  needed="$(readelf -d "$bin" 2>/dev/null | grep -o 'libc\.so[^]]*' | head -n 1)"
+  case "$needed" in
+  libc.so.6)
+    compat_is_glibc_elf "$bin"
+    ;;
+  libc.so)
+    ! compat_is_glibc_elf "$bin"
+    ;;
+  *)
+    # Neither linkage (static build): it must not be treated as glibc.
+    ! compat_is_glibc_elf "$bin"
+    ;;
+  esac
+)
+
+run_test "classify separates glibc, native, script, unknown and missing" assert_classify
+run_test "the glibc loader is resolved from the sysroot" assert_loader_is_found_in_the_sysroot
+run_test "wrap runs the binary through the loader and unwraps cleanly" assert_wrap_runs_and_is_reversible
+run_test "wrap is idempotent and never stacks wrappers" assert_wrap_is_idempotent
+run_test "adapt only rewrites glibc binaries on PATH" assert_adapt_only_touches_glibc
+run_test "describe names a wrapped binary" assert_describe_names_a_wrapper
+run_test "fix_shebang rewrites an unrunnable /usr/bin/env interpreter" assert_fix_shebang_rewrites_env_interpreter
+run_test "fix_shebang keeps interpreter arguments" assert_fix_shebang_keeps_interpreter_arguments
+run_test "fix_shebang leaves unknown interpreters alone" assert_fix_shebang_gives_up_on_unknown_interpreters
+run_test "fix_shebangs counts changed files, not inspected ones" assert_fix_shebangs_counts_only_changes
+run_test "glibc detection agrees with readelf" assert_detection_matches_readelf
+
+printf '1..%d\n' "$pass"
+if ((failed > 0)); then
+  printf 'Android compatibility: %d passed, %d failed\n' "$pass" "$failed" >&2
+  exit 1
+fi
+printf 'Android compatibility: %d passed, %d failed\n' "$pass" "$failed"
