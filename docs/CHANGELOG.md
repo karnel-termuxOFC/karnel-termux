@@ -6,6 +6,14 @@ layout: base
 
 # Documentation Changelog
 
+## 4.17.45
+
+- **npm on a real Termux host:** every npm call goes through `karnel_npm()`, which runs npm through `node` when its `#!/usr/bin/env node` shebang cannot be executed (Termux ships no `/usr`, so the kernel answered `bad interpreter`) and retries with `--force` only on `EBADPLATFORM`. The remaining bare `npm install/uninstall/update/view/ls` calls in the installers were converted; guests inside proot keep plain npm.
+- **Installers that could never succeed:** wpscan and wafw00f read their recorded backend with a redirection-only command (`< file`) that prints nothing, so update and uninstall always failed; KeelCode validated the base package digest instead of the `linux-arm64` release it actually downloads; Cline, Command Code, Copilot Termux and Walkie repaired the shebang on the failure branch, leaving the installed binary unrunnable.
+- **Stub detection:** `karnel_is_stub_binary()` replaces a word-list heuristic that reported real CLIs (`supercode`, `python-config`) as offline placeholders right after a successful install.
+- **Test harness:** `run_test` runs the body under `set -e` so intermediate failures surface. This exposed a Turbopack contract that always failed on the x86_64 CI runner, a Kilo Code install aborted by a `tar` stub and an Odysseus uninstall that had to assert its refusal explicitly.
+- **Output noise:** the version spinner probes `/dev/tty` for real instead of trusting `-c`, which passed without a controlling terminal and leaked `No such device or address` into every `karnel update`.
+
 ## 4.17.44
 
 - **CLI correctness:** `karnel search` builds its catalog from tool READMEs in one pass instead of per-directory subshells; `karnel stats` counts modules that actually carry install markers and prints `not installed` instead of empty probes; `karnel open` gained routes for `doctor`, `brain`, `pg`, `init`, `env`, `backup`, `show`, `cleanup`, `supabase`, `linux`, `plugin`, `voice`, `security`, `osint`, `termux`, `termux-api` and `terms`.
