@@ -287,6 +287,10 @@ assert_turbopack_stages_and_preserves_unowned_wrappers() (
   log_warn() { :; }
   loading() { shift; "$@"; }
   read_confirm_default() { REINSTALL=y; }
+  # This installer is ARM64-only by design, but the CI runner is x86_64;
+  # report the architecture the contract is written for (same stub the other
+  # arch-gated installer tests already use).
+  uname() { printf 'aarch64\n'; }
   # shellcheck source=../karnel/tools/npm/turbopack/install.sh
   source "$ROOT_DIR/karnel/tools/npm/turbopack/install.sh"
   _install_deps() { :; }
