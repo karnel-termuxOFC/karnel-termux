@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -10,7 +11,7 @@ _install_httptmux_npm() {
 }
 
 _install_httptmux_npm_impl() {
-  if ! npm install -g httptmux &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g httptmux &>>"$LOG_FILE"; then
     log_error "Failed to install httptmux"
     return 1
   fi
@@ -22,7 +23,7 @@ _uninstall_httptmux_npm() {
 }
 
 _uninstall_httptmux_npm_impl() {
-  if ! npm uninstall -g httptmux &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g httptmux &>>"$LOG_FILE"; then
     log_error "Failed to uninstall httptmux"
     return 1
   fi
@@ -65,7 +66,7 @@ update_httptmux() {
 }
 
 _do_update_httptmux() {
-  npm update -g httptmux &>>"$LOG_FILE" || return 1
+  karnel_npm update -g httptmux &>>"$LOG_FILE" || return 1
   return 0
 }
 

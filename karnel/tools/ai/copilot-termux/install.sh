@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -20,11 +21,11 @@ install_copilot_termux() {
     return 1
   fi
 
-  if ! npm install -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
-  _fix_npm_shebang "copilot-termux" || return 1
+  if ! karnel_npm install -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
     log_error "Failed to install Copilot-Termux via npm"
     return 1
   fi
+  _fix_npm_shebang "copilot-termux" || return 1
 
   hash -r 2>/dev/null || true
 
@@ -48,7 +49,7 @@ uninstall_copilot_termux() {
   log_info "Uninstalling Copilot-Termux..."
   mkdir -p "$(dirname "$LOG_FILE")"
 
-  if npm uninstall -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
+  if karnel_npm uninstall -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
     log_success "Copilot-Termux uninstalled"
     return 0
   else
@@ -67,7 +68,7 @@ update_copilot_termux() {
 _do_update_copilot_termux() {
   log_info "Updating Copilot-Termux..."
 
-  if npm update -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
+  if karnel_npm update -g @bash0816/copilot-termux &>>"$LOG_FILE"; then
     log_success "Copilot-Termux updated"
     return 0
   else

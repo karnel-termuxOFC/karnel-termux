@@ -11,6 +11,40 @@ karnel_mark_module_installed() {
   chmod 600 "$dir/.installed" 2>/dev/null || true
 }
 
+# True when the file is an offline placeholder ("stub") written by Karnel when
+# a real install is unavailable: a tiny shell script that only prints an error
+# and exits. Scanning arbitrary installed binaries for words like "offline"
+# false-positives on real CLIs (supercode ships an 11 MB JS bundle containing
+# "offline"; python-config carries -Wunreachable-code), so a stub must match
+# every property of a Karnel stub: small, shell interpreter, stub message and
+# an `exit 1`.
+karnel_is_stub_binary() {
+  local file="$1" size first interp
+  [[ -f "$file" && -x "$file" ]] || return 1
+  size="$(wc -c <"$file" 2>/dev/null)" || return 1
+  [[ "$size" =~ ^[0-9]+$ ]] || return 1
+  ((size > 0 && size <= 2048)) || return 1
+  IFS= read -r first <"$file" || [[ -n "$first" ]] || return 1
+  [[ "$first" == '#!'* ]] || return 1
+  interp="${first#\#!}"
+  interp="${interp# }"
+  interp="${interp%% *}"
+  # `#!/usr/bin/env bash` resolves the interpreter through env.
+  if [[ "$interp" == */env ]]; then
+    interp="${first#\#!}"
+    interp="${interp#*env }"
+    interp="${interp%% *}"
+  fi
+  interp="${interp##*/}"
+  case "$interp" in
+  sh | bash | dash | zsh | ksh | ash) ;;
+  *) return 1 ;;
+  esac
+  grep -qiE 'offline|unreachable|not[[:space:]._-]*available|indispon[ií]vel|inacess[ií]vel' "$file" || return 1
+  grep -qE '(^|[^[:alnum:]_])exit[[:space:]]+1([^[:alnum:]_]|$)' "$file" || return 1
+  return 0
+}
+
 karnel_mark_module_not_installed() {
   [[ -n "${KARNEL_DATA:-}" ]] || return 0
   rm -f "$KARNEL_DATA/$1/.installed" 2>/dev/null || true

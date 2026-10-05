@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -136,7 +137,7 @@ install_omni_route() {
   fi
 
   log_info "Installing omniRoute (this may take a while)..."
-  if command -v npm >/dev/null 2>&1 && npm i karnelroute --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
+  if command -v npm >/dev/null 2>&1 && karnel_npm i karnelroute --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
   _fix_npm_shebang "omni-route" || return 1
     sed -i '1s|^#!/usr/bin/env node|#!'"$PREFIX"'/bin/node|' "$OMNI_ROUTE_LOCAL_BIN" 2>/dev/null
     _omni_route_wrap_and_fix
@@ -184,7 +185,7 @@ _do_update_omni_route() {
     return $?
   fi
 
-  if npm i karnelroute@latest --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
+  if karnel_npm i karnelroute@latest --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
     sed -i '1s|^#!/usr/bin/env node|#!'"$PREFIX"'/bin/node|' "$OMNI_ROUTE_LOCAL_BIN" 2>/dev/null
     _omni_route_wrap_and_fix
     if _omni_route_ok; then

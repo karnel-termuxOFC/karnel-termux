@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_markserv_npm() {
 }
 
 _install_markserv_npm_impl() {
-  if ! npm install -g markserv &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g markserv &>>"$LOG_FILE"; then
     log_error "Failed to install markserv"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_markserv_npm() {
 }
 
 _uninstall_markserv_npm_impl() {
-  if ! npm uninstall -g markserv &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g markserv &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Markserv"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_markserv_npm() {
 }
 
 _update_markserv_npm_impl() {
-  if ! npm update -g markserv &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g markserv &>>"$LOG_FILE"; then
     log_error "Failed to update Markserv"
     return 1
   fi

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -18,7 +19,7 @@ install_freebuff() {
   fi
 
   log_info "Installing Freebuff..."
-  npm install -g freebuff || {
+  karnel_npm install -g freebuff || {
     log_error "Failed to install Freebuff"
     return 1
   }
@@ -48,7 +49,7 @@ uninstall_freebuff() {
   fi
 
   log_info "Uninstalling Freebuff..."
-  npm uninstall -g freebuff || {
+  karnel_npm uninstall -g freebuff || {
     log_error "Failed to uninstall Freebuff"
     return 1
   }
@@ -63,7 +64,7 @@ update_freebuff() {
 }
 
 _do_update_freebuff() {
-  npm update -g freebuff || {
+  karnel_npm update -g freebuff || {
     log_error "Failed to update Freebuff"
     return 1
   }

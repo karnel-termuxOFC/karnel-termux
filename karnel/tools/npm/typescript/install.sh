@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_typescript_npm() {
 }
 
 _install_typescript_npm_impl() {
-  if ! npm install -g typescript &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g typescript &>>"$LOG_FILE"; then
     log_error "Failed to install TypeScript"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_typescript_npm() {
 }
 
 _uninstall_typescript_npm_impl() {
-  if ! npm uninstall -g typescript &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g typescript &>>"$LOG_FILE"; then
     log_error "Failed to uninstall TypeScript"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_typescript_npm() {
 }
 
 _update_typescript_npm_impl() {
-  if ! npm update -g typescript &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g typescript &>>"$LOG_FILE"; then
     log_error "Failed to update TypeScript"
     return 1
   fi

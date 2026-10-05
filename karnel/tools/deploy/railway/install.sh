@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/install"
 import "@/utils/version"
@@ -168,7 +169,7 @@ install_railway() {
 
   mkdir -p "$(dirname "$LOG_FILE")" "$RAILWAY_DATA_DIR"
 
-  if npm install -g @railway/cli --legacy-peer-deps &>>"$LOG_FILE"; then
+  if karnel_npm install -g @railway/cli --legacy-peer-deps &>>"$LOG_FILE"; then
     command -v termux-fix-shebang &>/dev/null && termux-fix-shebang "$(command -v railway 2>/dev/null)" &>/dev/null
     _railway_mark_install || return 1
     log_success "Railway CLI installed via npm"
@@ -195,7 +196,7 @@ uninstall_railway() {
     return 0
   fi
   if _railway_command_is_karnel_owned; then
-    npm uninstall -g @railway/cli &>>"$LOG_FILE" || true
+    karnel_npm uninstall -g @railway/cli &>>"$LOG_FILE" || true
     rm -f "$_RAILWAY_MARKER"
   else
     log_warn "Keeping existing railway command not managed by Karnel"
@@ -219,7 +220,7 @@ update_railway() {
 }
 
 _do_update_railway() {
-  npm update -g @railway/cli --legacy-peer-deps &>>"$LOG_FILE" || {
+  karnel_npm update -g @railway/cli --legacy-peer-deps &>>"$LOG_FILE" || {
     log_warn "npm update failed"
     return 1
   }

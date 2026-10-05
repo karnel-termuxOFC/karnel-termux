@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_ncu_npm() {
 }
 
 _install_ncu_npm_impl() {
-  if ! npm install -g npm-check-updates &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g npm-check-updates &>>"$LOG_FILE"; then
     log_error "Failed to install npm-check-updates"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_ncu_npm() {
 }
 
 _uninstall_ncu_npm_impl() {
-  if ! npm uninstall -g npm-check-updates &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g npm-check-updates &>>"$LOG_FILE"; then
     log_error "Failed to uninstall NPM Check Updates"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_ncu_npm() {
 }
 
 _update_ncu_npm_impl() {
-  if ! npm update -g npm-check-updates &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g npm-check-updates &>>"$LOG_FILE"; then
     log_error "Failed to update NPM Check Updates"
     return 1
   fi

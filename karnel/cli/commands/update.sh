@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/colors"
 import "@/utils/tools"
@@ -366,7 +367,7 @@ _update_try_npm() {
     return 1
   fi
   log_info "Trying npm update..."
-  if npm update -g karnel-termux --ignore-scripts 2>/dev/null; then
+  if karnel_npm update -g karnel-termux --ignore-scripts 2>/dev/null; then
     local new_ver
     new_ver=$(_npm_installed_version)
     log_success "Updated to v$new_ver via npm"
@@ -383,7 +384,7 @@ _update_try_npm_install() {
     return 1
   fi
   log_info "Trying npm install..."
-  if npm install -g karnel-termux@latest --ignore-scripts 2>/dev/null; then
+  if karnel_npm install -g karnel-termux@latest --ignore-scripts 2>/dev/null; then
     local new_ver
     new_ver=$(_npm_installed_version)
     log_success "Updated to v$new_ver via npm install"

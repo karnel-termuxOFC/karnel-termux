@@ -16,7 +16,13 @@ failed=0
 run_test() {
   local name="$1"
   shift
-  if "$@"; then
+  local rc=0 errexit_was_on=0
+  [[ $- == *e* ]] && errexit_was_on=1
+  set +e
+  ( set -e; "$@" )
+  rc=$?
+  if (( errexit_was_on )); then set -e; fi
+  if (( rc == 0 )); then
     ((pass += 1))
     printf 'ok - %s\n' "$name"
   else
@@ -31,7 +37,14 @@ assert_keelcode_lifecycle() (
   export KARNEL_DATA="$TEST_ROOT/data"
   mkdir -p "$KARNEL_CACHE" "$TEST_ROOT/prefix/bin"
   export PATH="$TEST_ROOT/prefix/bin"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_error() { :; }
@@ -54,10 +67,14 @@ assert_keelcode_lifecycle() (
   source "$ROOT_DIR/karnel/tools/ai/keelcode/install.sh"
   _keelcode_install_termux_wrapper() { :; }
 
-  install_keelcode
-  command -v keelcode >/dev/null
-  uninstall_keelcode
-  ! command -v keelcode
+  # Every step must gate the next one: without `|| return 1` a failed install
+  # still ends the test on `! command -v keelcode` (which then succeeds) and
+  # reports a false pass.
+  install_keelcode || return 1
+  command -v keelcode >/dev/null || return 1
+  uninstall_keelcode || return 1
+  ! command -v keelcode || return 1
+  return 0
 )
 run_test "KeelCode lifecycle" assert_keelcode_lifecycle
 
@@ -67,7 +84,14 @@ assert_banner_bash_startup() (
   export KARNEL_CACHE="$TEST_ROOT/banner-cache"
   export KARNEL_UTILS="$ROOT_DIR/karnel/utils"
   mkdir -p "$HOME" "$PREFIX/etc" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_warn() { :; }
@@ -93,7 +117,14 @@ assert_superfile_staged_build() (
   export KARNEL_CACHE="$TEST_ROOT/cache"
   export PREFIX="$TEST_ROOT/prefix"
   mkdir -p "$KARNEL_CACHE" "$PREFIX/bin"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_error() { :; }
@@ -140,7 +171,14 @@ assert_downloaded_utils_keep_source_payloads() (
   export KARNEL_PATH="$ROOT_DIR/karnel"
   export PATH="$PREFIX/bin:$PATH"
   mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   pkg() { :; }
@@ -198,7 +236,14 @@ assert_omni_route_preserves_unowned_wrappers() (
   printf '#!/usr/bin/env bash\nexit 1\n' >"$PREFIX/bin/karnelroute"
   chmod +x "$PREFIX/bin/omni-route" "$PREFIX/bin/karnelroute"
   printf '#!/usr/bin/env node\n' >"$HOME/.karnel/packages/karnelroute/node_modules/karnelroute/bin/karnelroute.mjs"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_warn() { :; }
@@ -228,7 +273,14 @@ assert_turbopack_stages_and_preserves_unowned_wrappers() (
   export KARNEL_PATH="$ROOT_DIR/karnel"
   export PATH="$PREFIX/bin:$PATH"
   mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_error() { :; }
@@ -265,7 +317,14 @@ assert_kilocode_ownership_and_staging() (
   export KARNEL_PATH="$ROOT_DIR/karnel"
   export PATH="$PREFIX/bin:$PATH"
   mkdir -p "$HOME" "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_warn() { :; }
@@ -273,7 +332,15 @@ assert_kilocode_ownership_and_staging() (
   loading() { shift; "$@"; }
   curl() { : >"${@: -1}"; }
   verify_github_release_asset() { return 0; }
-  tar() { printf '#!/usr/bin/env bash\nexit 0\n' >"$4/kilo"; }
+  # safe_extract_tar probes with `tar -tf` and `tar -tvf` before extracting;
+  # a stub that only handles the extract form breaks the listing and aborts.
+  tar() {
+    case "$1" in
+      -tf) printf 'kilo\n' ;;
+      -tvf) printf 'rwxr-xr-x user/group 1024 2024-01-01 00:00 kilo\n' ;;
+      *) printf '#!/usr/bin/env bash\nexit 0\n' >"$4/kilo" ;;
+    esac
+  }
   cc() { local output="${3}"; printf '#!/usr/bin/env bash\nexit 0\n' >"$output"; }
   # shellcheck source=../karnel/tools/ai/kilocode-cli/install.sh
   source "$ROOT_DIR/karnel/tools/ai/kilocode-cli/install.sh"
@@ -292,7 +359,8 @@ assert_kilocode_ownership_and_staging() (
   [[ -f "$KILOCODE_DATA_DIR/kilo" ]]
   printf 'unowned\n' >"$PREFIX/bin/kilocode"
   printf 'unowned\n' >"$PREFIX/bin/kilo"
-  uninstall_kilocode_cli
+  # Unowned data must make uninstall refuse (rc 1) and leave everything alone.
+  ! uninstall_kilocode_cli
   [[ -f "$PREFIX/bin/kilocode" && -f "$PREFIX/bin/kilo" && -d "$KILOCODE_DATA_DIR" ]]
 )
 run_test "Kilo Code ownership and staging" assert_kilocode_ownership_and_staging
@@ -305,7 +373,14 @@ assert_odysseus_ownership() (
   export ODYSSEUS_TEST_UBUNTU_ROOT="$TEST_ROOT/odysseus-ubuntu"
   local ubuntu_root="$ODYSSEUS_TEST_UBUNTU_ROOT"
   mkdir -p "$HOME" "$PREFIX/bin" "$KARNEL_CACHE" "$ubuntu_root/root/odysseus"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_warn() { :; }
@@ -328,7 +403,8 @@ assert_odysseus_ownership() (
 
   mkdir -p "$ODYSSEUS_DATA_DIR" "$ubuntu_root/root/odysseus"
   printf 'unowned\n' >"$PREFIX/bin/odysseus"
-  uninstall_odysseus
+  # Unowned data must make uninstall refuse (rc 1) and leave everything alone.
+  ! uninstall_odysseus
   [[ -f "$PREFIX/bin/odysseus" && -d "$ODYSSEUS_DATA_DIR" && -d "$ubuntu_root/root/odysseus" ]]
 )
 run_test "Odysseus ownership" assert_odysseus_ownership
@@ -339,7 +415,14 @@ assert_voice_termux_api_marker_lifecycle() (
   export KARNEL_CACHE="$TEST_ROOT/voice-cache"
   export KARNEL_DATA="$TEST_ROOT/voice-data"
   mkdir -p "$HOME" "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_warn() { :; }
@@ -373,7 +456,14 @@ assert_downloaded_games_and_network_installers() (
   export KARNEL_PATH="$ROOT_DIR/karnel"
   export PATH="$PREFIX/bin:$PATH"
   mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_info() { :; }
   log_success() { :; }
   log_error() { :; }

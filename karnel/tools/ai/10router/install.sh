@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -15,7 +16,7 @@ _10router_dependencies() {
 }
 
 _install_10router_impl() {
-  if ! npm install -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"; then
     log_error "Failed to install 10Router"
     return 1
   fi
@@ -36,7 +37,7 @@ install_10router() {
 }
 
 _uninstall_10router_impl() {
-  npm uninstall -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"
+  karnel_npm uninstall -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"
 }
 
 uninstall_10router() {
@@ -49,7 +50,7 @@ uninstall_10router() {
 }
 
 _update_10router_impl() {
-  if ! npm update -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g "$TENROUTER_PACKAGE" &>>"$LOG_FILE"; then
     log_error "Failed to update 10Router"
     return 1
   fi

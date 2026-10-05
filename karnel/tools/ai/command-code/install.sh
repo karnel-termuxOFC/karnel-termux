@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -69,11 +70,11 @@ _install_command_code_npm_impl() {
     return 1
   fi
 
-  if ! (cd "$COMMAND_CODE_DATA_DIR" && npm install command-code@latest &>>"$LOG_FILE"); then
-  _fix_npm_shebang "command-code" || return 1
+  if ! (cd "$COMMAND_CODE_DATA_DIR" && karnel_npm install command-code@latest &>>"$LOG_FILE"); then
     log_error "Failed to install command-code package"
     return 1
   fi
+  _fix_npm_shebang "command-code" || return 1
 
   return 0
 }
@@ -161,7 +162,7 @@ update_command_code() {
 
 _update_command_code_impl() {
 	_command_code_verify_ownership || return 1
-  if (cd "$COMMAND_CODE_DATA_DIR" && npm update command-code &>>"$LOG_FILE"); then
+  if (cd "$COMMAND_CODE_DATA_DIR" && karnel_npm update command-code &>>"$LOG_FILE"); then
     return 0
   else
     log_error "Failed to update Command Code"

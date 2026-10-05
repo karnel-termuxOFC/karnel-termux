@@ -4,6 +4,7 @@
 # Provides version-specific library docs and code examples on-demand
 # Solves stale knowledge issues in AI tools like Claude Code, Cursor
 # Official: npm install -g ctx7
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -22,7 +23,7 @@ install_ctx7() {
   fi
 
   log_info "Installing ctx7 (Context7 documentation provider)..."
-  npm install -g ctx7 2>/dev/null
+  karnel_npm install -g ctx7 2>/dev/null
   local rc=$?
   _fix_npm_shebang "ctx7" || true
 
@@ -43,7 +44,7 @@ uninstall_ctx7() {
   fi
 
   log_info "Uninstalling ctx7..."
-  npm uninstall -g ctx7 2>/dev/null
+  karnel_npm uninstall -g ctx7 2>/dev/null
   return $?
 }
 
@@ -52,7 +53,7 @@ update_ctx7() {
 }
 
 _do_update_ctx7() {
-  npm update -g ctx7 2>/dev/null
+  karnel_npm update -g ctx7 2>/dev/null
   local _t
   _t=$(readlink -f "$PREFIX/bin/ctx7" 2>/dev/null)
   [ -f "$_t" ] && sed -i '1s|^#!/usr/bin/env node|#!/data/data/com.termux/files/usr/bin/env node|' "$_t"

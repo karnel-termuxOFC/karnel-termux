@@ -84,7 +84,14 @@ assert_cursor_and_railway_ownership() (
   export KARNEL_DATA="$HOME/.local/share/karnel-data"
   local railway_data="$KARNEL_DATA/deploy/railway"
   mkdir -p "$KARNEL_DATA/cursor" "$railway_data" "$PREFIX/bin" "$KARNEL_CACHE"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_warn() { :; }
 
   printf 'external cursor\n' >"$PREFIX/bin/cursor"

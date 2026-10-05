@@ -4,7 +4,9 @@ _WPSCAN_BACKEND_FILE="${KARNEL_DATA:-$HOME/.local/share/karnel}/security/wpscan.
 
 _wpscan_backend() {
   if [[ -f "$_WPSCAN_BACKEND_FILE" ]]; then
-    <"$_WPSCAN_BACKEND_FILE"
+    # A redirection-only command ("< file") reads nothing and prints nothing:
+    # it only wires fd 0 for a null command. Read the recorded backend out loud.
+    IFS= read -r _backend < "$_WPSCAN_BACKEND_FILE" && printf '%s\n' "$_backend"
   elif command -v dpkg &>/dev/null && dpkg -s wpscan &>/dev/null; then
     printf '%s\n' package
   elif command -v gem &>/dev/null && gem list -i wpscan &>/dev/null; then

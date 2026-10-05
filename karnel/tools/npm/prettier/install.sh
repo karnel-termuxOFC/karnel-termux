@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_prettier_npm() {
 }
 
 _install_prettier_npm_impl() {
-  if ! npm install -g prettier &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g prettier &>>"$LOG_FILE"; then
     log_error "Failed to install Prettier"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_prettier_npm() {
 }
 
 _uninstall_prettier_npm_impl() {
-  if ! npm uninstall -g prettier &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g prettier &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Prettier"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_prettier_npm() {
 }
 
 _update_prettier_npm_impl() {
-  if ! npm update -g prettier &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g prettier &>>"$LOG_FILE"; then
     log_error "Failed to update Prettier"
     return 1
   fi

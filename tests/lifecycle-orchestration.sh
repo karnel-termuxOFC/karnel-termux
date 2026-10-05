@@ -10,7 +10,13 @@ failed=0
 run_test() {
   local name="$1"
   shift
-  if "$@"; then
+    local rc=0 errexit_was_on=0
+  [[ $- == *e* ]] && errexit_was_on=1
+  set +e
+  ( set -e; "$@" )
+  rc=$?
+  if (( errexit_was_on )); then set -e; fi
+  if (( rc == 0 )); then
     ((pass += 1))
     printf 'ok - %s\n' "$name"
   else
@@ -33,8 +39,10 @@ assert_reinstall_stops_after_uninstall_failure() (
   uninstall_demo() { calls+=(uninstall); return 7; }
   install_demo() { calls+=(install); }
 
-  _run_tool_lifecycle_action fixture reinstall demo
-  rc=$?
+  # `|| rc=$?` keeps errexit from aborting before the code under test has
+  # returned, and matches how production (no `set -e`) invokes it.
+  rc=0
+  _run_tool_lifecycle_action fixture reinstall demo || rc=$?
   [[ $rc -eq 7 && "${calls[*]}" == "uninstall" ]]
 )
 run_test "reinstall stops after uninstall failure" assert_reinstall_stops_after_uninstall_failure
@@ -44,8 +52,8 @@ assert_reinstall_proceeds_after_uninstall_skip() (
   uninstall_demo() { calls+=(uninstall); return 2; }
   install_demo() { calls+=(install); }
 
-  _run_tool_lifecycle_action fixture reinstall demo
-  rc=$?
+  rc=0
+  _run_tool_lifecycle_action fixture reinstall demo || rc=$?
   # An uninstall that reports "already uninstalled" (rc 2) must not abort the
   # reinstall: the install step still runs so a not-yet-installed tool can be
   # (re)installed.
@@ -60,8 +68,8 @@ assert_registered_handler_guards_specific_flow() (
   reinstall_demo() { calls+=(unsafe-reinstall); }
   _register_safe_reinstall_handlers fixture demo
 
-  reinstall_demo
-  rc=$?
+  rc=0
+  reinstall_demo || rc=$?
   [[ $rc -eq 1 && "${calls[*]}" == "uninstall" ]]
 )
 run_test "registered specific reinstall is guarded" assert_registered_handler_guards_specific_flow
@@ -76,8 +84,8 @@ assert_install_marks_only_new_managed_install() (
 
   rm -f "$marker"
   install_python() { return 2; }
-  _run_tool_lifecycle_action lang install python
-  rc=$?
+  rc=0
+  _run_tool_lifecycle_action lang install python || rc=$?
   [[ $rc -eq 2 && ! -e "$marker" ]]
 )
 run_test "successful new install creates a private ownership marker" assert_install_marks_only_new_managed_install
@@ -90,8 +98,9 @@ assert_unowned_package_actions_are_preserved() (
   install_python() { calls+=(install); }
 
   for action in uninstall update reinstall; do
-    _run_tool_lifecycle_action lang "$action" python
-    [[ $? -eq 2 ]] || return 1
+    rc=0
+    _run_tool_lifecycle_action lang "$action" python || rc=$?
+    [[ $rc -eq 2 ]] || return 1
   done
   [[ ${#calls[@]} -eq 0 ]]
 )
@@ -114,8 +123,9 @@ assert_uninstall_removes_marker_only_on_success() (
   : >"$marker"
   uninstall_redis() { return 9; }
 
-  _run_tool_lifecycle_action db uninstall redis
-  [[ $? -eq 9 && -f "$marker" ]] || return 1
+  rc=0
+  _run_tool_lifecycle_action db uninstall redis || rc=$?
+  [[ $rc -eq 9 && -f "$marker" ]] || return 1
   uninstall_redis() { return 0; }
   _run_tool_lifecycle_action db uninstall redis
   [[ ! -e "$marker" ]]
@@ -135,11 +145,12 @@ assert_reinstall_recreates_marker_after_install() (
   [[ "${calls[*]}" == "uninstall install" && -f "$marker" ]] || return 1
 
   install_neovim() { calls+=(failed-install); return 8; }
-  _run_tool_lifecycle_action editor reinstall neovim
+  rc=0
+  _run_tool_lifecycle_action editor reinstall neovim || rc=$?
   # On install failure the ownership marker must survive so the tool is not
   # orphaned (a missing marker would make the protected guard refuse future
   # reinstall/uninstall operations on an already-installed tool).
-  [[ $? -eq 8 && -e "$marker" ]]
+  [[ $rc -eq 8 && -e "$marker" ]]
 )
 run_test "reinstall sequences handlers and recreates ownership after install" assert_reinstall_recreates_marker_after_install
 
@@ -180,8 +191,8 @@ assert_package_installers_report_existing() (
     }
     # shellcheck source=/dev/null
     source "$ROOT_DIR/karnel/tools/$file/install.sh"
-    "$handler"
-    rc=$?
+    rc=0
+    "$handler" || rc=$?
     [[ $rc -eq 2 ]] || return 1
   done
 )

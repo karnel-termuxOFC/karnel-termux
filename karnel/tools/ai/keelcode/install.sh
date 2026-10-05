@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -92,14 +93,19 @@ _keelcode_verify_ownership() {
   fi
 }
 
+# Integrity of the *platform* release, not of `latest`. The npm package
+# publishes each binary as its own version tag (0.2.0-linux-arm64, ...), so
+# asking /latest returns the base launcher's digest and the comparison always
+# fails against the arm64 tarball we actually download.
 _keelcode_get_integrity() {
-  curl -fsSL "https://registry.npmjs.org/@keelcode-ai/keelcode/latest" 2>/dev/null |
+  local version="$1"
+  curl -fsSL "https://registry.npmjs.org/@keelcode-ai/keelcode/${version}-linux-arm64" 2>/dev/null |
     python3 -c "import json,sys; print(json.load(sys.stdin).get('dist',{}).get('integrity',''))" 2>/dev/null
 }
 
 _keelcode_install_termux_wrapper() {
   local version staging archive native_dir wrapper expected actual
-  version="$(npm view "$KEELCODE_PACKAGE" version 2>/dev/null)" || return 1
+  version="$(karnel_npm view "$KEELCODE_PACKAGE" version 2>/dev/null)" || return 1
   [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
 
   command -v grun &>/dev/null || pkg install glibc-runner -y || return 1
@@ -115,7 +121,7 @@ _keelcode_install_termux_wrapper() {
     return 1
   fi
 
-  expected=$(_keelcode_get_integrity)
+  expected=$(_keelcode_get_integrity "$version")
   if [[ "$expected" =~ ^sha512-[A-Za-z0-9+/=]+$ ]]; then
     actual=$(python3 -c 'import base64,hashlib,sys; print("sha512-" + base64.b64encode(hashlib.sha512(open(sys.argv[1], "rb").read()).digest()).decode())' "$archive" 2>/dev/null)
     if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
@@ -187,7 +193,7 @@ install_keelcode() {
 
   log_info "Installing KeelCode..."
   local output rc
-  output="$(npm install -g "$KEELCODE_PACKAGE" --force 2>&1)"
+  output="$(karnel_npm install -g "$KEELCODE_PACKAGE" --force 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if (( rc != 0 )); then
@@ -225,7 +231,7 @@ uninstall_keelcode() {
   fi
 
   local output rc
-  output="$(npm uninstall -g "$KEELCODE_PACKAGE" 2>&1)"
+  output="$(karnel_npm uninstall -g "$KEELCODE_PACKAGE" 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if ((rc != 0)); then
@@ -243,7 +249,7 @@ update_keelcode() {
 
 _do_update_keelcode() {
   local output rc
-  output="$(npm update -g "$KEELCODE_PACKAGE" --force 2>&1)"
+  output="$(karnel_npm update -g "$KEELCODE_PACKAGE" --force 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if ((rc != 0)); then

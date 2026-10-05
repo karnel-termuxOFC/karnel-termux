@@ -4,6 +4,7 @@
 # Bridges human intent and AI output with structured technical specs
 # Stores specs in /openspec/ directory to guide AI agents
 # Official: npm install -g @fission-ai/openspec@latest
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -22,7 +23,7 @@ install_openspec() {
   fi
 
   log_info "Installing openspec (Spec-Driven Development framework)..."
-  npm install -g @fission-ai/openspec@latest 2>/dev/null
+  karnel_npm install -g @fission-ai/openspec@latest 2>/dev/null
   local rc=$?
   _fix_npm_shebang "openspec" || true
 
@@ -43,7 +44,7 @@ uninstall_openspec() {
   fi
 
   log_info "Uninstalling openspec..."
-  npm uninstall -g @fission-ai/openspec 2>/dev/null
+  karnel_npm uninstall -g @fission-ai/openspec 2>/dev/null
   return $?
 }
 
@@ -52,7 +53,7 @@ update_openspec() {
 }
 
 _do_update_openspec() {
-  npm update -g @fission-ai/openspec 2>/dev/null
+  karnel_npm update -g @fission-ai/openspec 2>/dev/null
   local _t
   _t=$(readlink -f "$PREFIX/bin/openspec" 2>/dev/null)
   [ -f "$_t" ] && sed -i '1s|^#!/usr/bin/env node|#!/data/data/com.termux/files/usr/bin/env node|' "$_t"

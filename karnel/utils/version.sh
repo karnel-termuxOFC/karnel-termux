@@ -2,6 +2,7 @@
 
 import "@/utils/log"
 import "@/utils/colors"
+import "@/utils/npm"
 
 if ! declare -f import >/dev/null 2>&1; then
   echo "karnel/version.sh: bootstrap not loaded" >&2
@@ -54,12 +55,13 @@ _spin_capture() {
   local _ktmpdir="${KARNEL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/karnel}"
   mkdir -p "$_ktmpdir" 2>/dev/null || _ktmpdir="${TMPDIR:-${KARNEL_CACHE:-$HOME/.cache/karnel}}"
   tmp=$(mktemp "$_ktmpdir/karnel.XXXXXX" 2>/dev/null) || tmp=$(mktemp 2>/dev/null)
-  local spinner_fd
-  if [ -c /dev/tty ] 2>/dev/null; then
-    spinner_fd=/dev/tty
-  else
-    spinner_fd=/dev/null
-  fi
+  local spinner_fd=/dev/null
+  # `-c /dev/tty` only proves the node is a character device. Without a
+  # controlling terminal (background job, no TTY session) the open fails with
+  # ENXIO and every spinner frame would print
+  # "/dev/tty: No such device or address" into the command output, so try the
+  # open for real before writing to it.
+  { : >/dev/tty; } 2>/dev/null && spinner_fd=/dev/tty
 
   printf "    ${CYAN}%s${D_CYAN} %s${NC}" "${frames[0]}" "$msg" >"$spinner_fd"
 
@@ -90,11 +92,11 @@ _get_installed_npm_version() {
 
 _capture_npm_version() {
   local pkg="$1"
-  npm ls -g "$pkg" --depth=0 2>/dev/null | grep "$pkg@" | sed 's/.*@//'
+  karnel_npm ls -g "$pkg" --depth=0 2>/dev/null | grep "$pkg@" | sed 's/.*@//'
 }
 
 _get_remote_npm_version() {
-  _spin_capture "Checking npm" npm view "$1" version 2>/dev/null
+  _spin_capture "Checking npm" karnel_npm view "$1" version 2>/dev/null
 }
 
 _get_remote_pip_version() {

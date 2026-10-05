@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -124,14 +125,14 @@ _cline_install_global() {
 }
 
 _cline_install_global_impl() {
-  if ! npm i -g cline &>>"$LOG_FILE"; then
-  _fix_npm_shebang "cline" || return 1
+  if ! karnel_npm i -g cline &>>"$LOG_FILE"; then
     log_error "Failed to install cline via npm"
     return 1
   fi
+  _fix_npm_shebang "cline" || return 1
 
   local version tarball
-  version=$(npm view cline version 2>/dev/null || echo "3.0.38")
+  version=$(karnel_npm view cline version 2>/dev/null || echo "3.0.38")
   tarball=$(mktemp "$CLINE_DATA_DIR/cline-XXXXXX.tgz") || { log_error "Failed to create temp dir"; return 1; }
   if ! curl -fsSL \
     "https://registry.npmjs.org/@cline/cli-linux-arm64/-/cli-linux-arm64-${version}.tgz" \
@@ -142,7 +143,7 @@ _cline_install_global_impl() {
   fi
 
   local expected actual
-  expected=$(npm view "@cline/cli-linux-arm64@$version" dist.integrity 2>/dev/null)
+  expected=$(karnel_npm view "@cline/cli-linux-arm64@$version" dist.integrity 2>/dev/null)
   if [[ -z "$expected" ]]; then
     rm -f "$tarball"
     log_error "Falha ao obter a integridade do binário do Cline no registry npm"
@@ -250,7 +251,7 @@ uninstall_cline() {
   _cline_wrapper_owned && rm -f "$PREFIX/bin/cline"
   _cline_data_owned && rm -rf "$CLINE_DATA_DIR"
 
-  npm uninstall -g cline &>>"$LOG_FILE" || true
+  karnel_npm uninstall -g cline &>>"$LOG_FILE" || true
   rm -rf "$PREFIX/lib/node_modules/@cline/cli-linux-arm64" &>>"$LOG_FILE" || true
   rm -f "$PREFIX/lib/node_modules/cline/bin/.cline" &>>"$LOG_FILE" || true
 
@@ -263,7 +264,7 @@ update_cline() {
 }
 
 _update_cline_impl() {
-  if ! npm update -g cline &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g cline &>>"$LOG_FILE"; then
     log_error "Failed to update cline"
     return 1
   fi

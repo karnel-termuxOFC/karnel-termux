@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -39,7 +40,7 @@ _install_openclaude_npm_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm install -g @gitlawb/openclaude &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g @gitlawb/openclaude &>>"$LOG_FILE"; then
     log_error "Failed to install OpenClaude"
     return 1
   fi
@@ -79,7 +80,7 @@ uninstall_openclaude() {
 }
 
 _uninstall_openclaude_impl() {
-  if ! npm uninstall -g @gitlawb/openclaude &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g @gitlawb/openclaude &>>"$LOG_FILE"; then
     log_error "Failed to uninstall OpenClaude"
     return 1
   fi
@@ -94,7 +95,7 @@ _update_openclaude_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm update -g @gitlawb/openclaude &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g @gitlawb/openclaude &>>"$LOG_FILE"; then
     log_error "Failed to update OpenClaude"
     return 1
   fi

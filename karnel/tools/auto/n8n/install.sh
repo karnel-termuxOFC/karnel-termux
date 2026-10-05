@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -39,7 +40,7 @@ _install_n8n_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if npm install -g n8n &>>"$LOG_FILE"; then
+  if karnel_npm install -g n8n &>>"$LOG_FILE"; then
     log_success "n8n installed"
     return 0
   else
@@ -60,7 +61,7 @@ install_n8n() {
 _uninstall_n8n_impl() {
   mkdir -p "$(dirname "$LOG_FILE")"
 
-  if npm uninstall -g n8n &>>"$LOG_FILE"; then
+  if karnel_npm uninstall -g n8n &>>"$LOG_FILE"; then
     log_success "n8n uninstalled"
     return 0
   else
@@ -83,7 +84,7 @@ _update_n8n_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if npm update -g n8n &>>"$LOG_FILE"; then
+  if karnel_npm update -g n8n &>>"$LOG_FILE"; then
     log_success "n8n updated"
     return 0
   else

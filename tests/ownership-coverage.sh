@@ -8,7 +8,13 @@ failed=0
 run_test() {
   local name="$1"
   shift
-  if "$@"; then
+    local rc=0 errexit_was_on=0
+  [[ $- == *e* ]] && errexit_was_on=1
+  set +e
+  ( set -e; "$@" )
+  rc=$?
+  if (( errexit_was_on )); then set -e; fi
+  if (( rc == 0 )); then
     ((pass += 1))
     printf 'ok - %s\n' "$name"
   else

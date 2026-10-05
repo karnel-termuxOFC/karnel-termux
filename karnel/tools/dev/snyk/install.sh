@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -10,7 +11,7 @@ _install_snyk_npm() {
 }
 
 _install_snyk_npm_impl() {
-  if ! npm install -g snyk &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g snyk &>>"$LOG_FILE"; then
     log_error "Failed to install Snyk"
     return 1
   fi
@@ -22,7 +23,7 @@ _uninstall_snyk_npm() {
 }
 
 _uninstall_snyk_npm_impl() {
-  if ! npm uninstall -g snyk &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g snyk &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Snyk"
     return 1
   fi
@@ -65,7 +66,7 @@ update_snyk() {
 }
 
 _do_update_snyk() {
-  npm update -g snyk &>>"$LOG_FILE" || return 1
+  karnel_npm update -g snyk &>>"$LOG_FILE" || return 1
   return 0
 }
 

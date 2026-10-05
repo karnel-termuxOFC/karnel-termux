@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/colors"
 
@@ -169,8 +170,8 @@ EOF
 }
 
 _install_next_deps() {
-	npm install axios lucide-react framer-motion sonner zod react-hook-form @hookform/resolvers @tanstack/react-query zustand tailwindcss &>"$LOG_FILE"
-	npm install -D prettier prettier-plugin-tailwindcss &>>"$LOG_FILE"
+	karnel_npm install axios lucide-react framer-motion sonner zod react-hook-form @hookform/resolvers @tanstack/react-query zustand tailwindcss &>"$LOG_FILE"
+	karnel_npm install -D prettier prettier-plugin-tailwindcss &>>"$LOG_FILE"
 }
 
 # ===== REACT + VITE =====
@@ -295,8 +296,8 @@ EOF
 }
 
 _install_react_deps() {
-	npm install axios lucide-react framer-motion sonner zod react-hook-form @hookform/resolvers @tanstack/react-query zustand tailwindcss clsx tailwind-merge &>"$LOG_FILE"
-	npm install -D prettier prettier-plugin-tailwindcss &>>"$LOG_FILE"
+	karnel_npm install axios lucide-react framer-motion sonner zod react-hook-form @hookform/resolvers @tanstack/react-query zustand tailwindcss clsx tailwind-merge &>"$LOG_FILE"
+	karnel_npm install -D prettier prettier-plugin-tailwindcss &>>"$LOG_FILE"
 }
 
 # ===== EXPRESS.JS =====
@@ -355,11 +356,11 @@ configure_express() {
 }
 
 _install_express_deps() {
-	npm install express pg typeorm reflect-metadata jsonwebtoken cookie-parser morgan cors bcryptjs helmet cloudinary multer express-rate-limit tsconfig-paths zod &>"$LOG_FILE"
+	karnel_npm install express pg typeorm reflect-metadata jsonwebtoken cookie-parser morgan cors bcryptjs helmet cloudinary multer express-rate-limit tsconfig-paths zod &>"$LOG_FILE"
 }
 
 _install_express_dev() {
-	npm install -D typescript ts-node-dev tsconfig-paths tsc-alias @types/node @types/multer @types/morgan @types/jsonwebtoken @types/helmet @types/express @types/cors @types/cookie-parser @types/bcryptjs &>>"$LOG_FILE"
+	karnel_npm install -D typescript ts-node-dev tsconfig-paths tsc-alias @types/node @types/multer @types/morgan @types/jsonwebtoken @types/helmet @types/express @types/cors @types/cookie-parser @types/bcryptjs &>>"$LOG_FILE"
 }
 
 _setup_express_structure() {
@@ -578,8 +579,8 @@ configure_nest() {
 }
 
 _install_nest_deps() {
-	npm install @nestjs/typeorm typeorm pg @nestjs/jwt @nestjs/passport passport passport-jwt passport-local class-validator class-transformer bcryptjs helmet cloudinary &>>"$LOG_FILE"
-	npm install -D @types/passport-jwt @types/passport-local @types/bcryptjs &>>"$LOG_FILE"
+	karnel_npm install @nestjs/typeorm typeorm pg @nestjs/jwt @nestjs/passport passport passport-jwt passport-local class-validator class-transformer bcryptjs helmet cloudinary &>>"$LOG_FILE"
+	karnel_npm install -D @types/passport-jwt @types/passport-local @types/bcryptjs &>>"$LOG_FILE"
 }
 
 configure_python() {

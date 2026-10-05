@@ -87,7 +87,13 @@ run_test() {
   shift
   TESTS_RUN=$((TESTS_RUN + 1))
 
-  if "$@"; then
+  local rc=0 errexit_was_on=0
+  [[ $- == *e* ]] && errexit_was_on=1
+  set +e
+  ( set -e; "$@" )
+  rc=$?
+  if (( errexit_was_on )); then set -e; fi
+  if (( rc == 0 )); then
     printf 'ok - %s\n' "$name"
   else
     TESTS_FAILED=$((TESTS_FAILED + 1))

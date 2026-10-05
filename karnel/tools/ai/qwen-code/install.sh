@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -39,7 +40,7 @@ _install_qwen_code_npm_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm install -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
     log_error "Failed to install Qwen Code"
     return 1
   fi
@@ -80,7 +81,7 @@ uninstall_qwen_code() {
 }
 
 _uninstall_qwen_code_impl() {
-  if ! npm uninstall -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Qwen Code"
     return 1
   fi
@@ -95,7 +96,7 @@ _update_qwen_code_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm update -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g @qwen-code/qwen-code &>>"$LOG_FILE"; then
     log_error "Failed to update Qwen Code"
     return 1
   fi

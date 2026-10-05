@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -39,7 +40,7 @@ _install_localtunnel_npm() {
 }
 
 _install_localtunnel_npm_impl() {
-  if ! npm install -g localtunnel &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g localtunnel &>>"$LOG_FILE"; then
     log_error "Failed to install Localtunnel"
     return 1
   fi
@@ -69,7 +70,7 @@ _uninstall_localtunnel_npm() {
 }
 
 _uninstall_localtunnel_npm_impl() {
-  if ! npm uninstall -g localtunnel &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g localtunnel &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Localtunnel"
     return 1
   fi
@@ -94,7 +95,7 @@ _update_localtunnel_npm() {
 }
 
 _update_localtunnel_npm_impl() {
-  if ! npm update -g localtunnel &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g localtunnel &>>"$LOG_FILE"; then
     log_error "Failed to update Localtunnel"
     return 1
   fi

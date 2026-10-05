@@ -9,6 +9,7 @@
 
 import "@/utils/log"
 import "@/utils/colors"
+import "@/utils/tools"
 
 # KARNEL_CACHE e PREFIX são definidos via env.sh
 # Exportados aqui apenas como fallback para scripts que carregam all.sh diretamente
@@ -114,16 +115,9 @@ _validate_tool_installed() {
       # Verificação extra: se for um stub (shell script que só mostra erro), considera falha
       local bin_path
       bin_path=$(command -v "$bin")
-      if [[ -f "$bin_path" ]]; then
-        local first_line
-        first_line=$(head -1 "$bin_path" 2>/dev/null)
-        # Stubs geralmente começam com #! e contêm "offline" ou "unreachable"
-        if [[ "$first_line" == "#!"* ]]; then
-          if grep -qiE "offline|unreachable|not.available|stub|indisponivel|inacessivel" "$bin_path" 2>/dev/null; then
-            log_warn "$tool_name: instalado como stub offline (instalação real indisponível)"
-            return 2
-          fi
-        fi
+      if karnel_is_stub_binary "$bin_path"; then
+        log_warn "$tool_name: instalado como stub offline (instalação real indisponível)"
+        return 2
       fi
       local probe="${AI_TOOL_PROBES[$tool_id]:-}"
       if [[ -n "$probe" ]]; then

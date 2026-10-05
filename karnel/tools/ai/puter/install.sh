@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -20,7 +21,7 @@ install_puter() {
   fi
 
   log_info "Installing Puter CLI..."
-  if ! npm install -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
+  if ! karnel_npm install -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
     log_error "Failed to install Puter CLI; see $PUTER_LOG_FILE"
     return 1
   fi
@@ -39,7 +40,7 @@ uninstall_puter() {
   fi
 
   log_info "Uninstalling Puter CLI..."
-  if ! npm uninstall -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
+  if ! karnel_npm uninstall -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
     log_error "Failed to uninstall Puter CLI; see $PUTER_LOG_FILE"
     return 1
   fi
@@ -54,7 +55,7 @@ update_puter() {
 }
 
 _do_update_puter() {
-  if ! npm update -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
+  if ! karnel_npm update -g "$PUTER_PACKAGE" &>>"$PUTER_LOG_FILE"; then
     log_error "Failed to update Puter CLI; see $PUTER_LOG_FILE"
     return 1
   fi

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_ngrok_npm() {
 }
 
 _install_ngrok_npm_impl() {
-  if ! npm install -g ngrok &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g ngrok &>>"$LOG_FILE"; then
     log_error "Failed to install ngrok"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_ngrok_npm() {
 }
 
 _uninstall_ngrok_npm_impl() {
-  if ! npm uninstall -g ngrok &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g ngrok &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Ngrok"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_ngrok_npm() {
 }
 
 _update_ngrok_npm_impl() {
-  if ! npm update -g ngrok &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g ngrok &>>"$LOG_FILE"; then
     log_error "Failed to update Ngrok"
     return 1
   fi

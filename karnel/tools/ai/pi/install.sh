@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -36,7 +37,7 @@ _install_pi_npm() {
 }
 
 _install_pi_npm_impl() {
-  if ! npm install -g --ignore-scripts @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g --ignore-scripts @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
     log_error "Failed to install Pi"
     return 1
   fi
@@ -76,7 +77,7 @@ uninstall_pi() {
 }
 
 _uninstall_pi_impl() {
-  if ! npm uninstall -g @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Pi"
     return 1
   fi
@@ -88,7 +89,7 @@ update_pi() {
 }
 
 _update_pi_impl() {
-  if ! npm install -g --ignore-scripts @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g --ignore-scripts @earendil-works/pi-coding-agent &>>"$LOG_FILE"; then
     log_error "Failed to update Pi"
     return 1
   fi

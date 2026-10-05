@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_live_server_npm() {
 }
 
 _install_live_server_npm_impl() {
-  if ! npm install -g live-server &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g live-server &>>"$LOG_FILE"; then
     log_error "Failed to install live-server"
     return 1
   fi
@@ -53,7 +54,7 @@ _uninstall_live_server_npm() {
 }
 
 _uninstall_live_server_npm_impl() {
-  if ! npm uninstall -g live-server &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g live-server &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Live Server"
     return 1
   fi
@@ -78,7 +79,7 @@ _update_live_server_npm() {
 }
 
 _update_live_server_npm_impl() {
-  if ! npm update -g live-server &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g live-server &>>"$LOG_FILE"; then
     log_error "Failed to update Live Server"
     return 1
   fi

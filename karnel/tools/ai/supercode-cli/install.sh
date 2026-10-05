@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -18,7 +19,7 @@ install_supercode_cli() {
 
   log_info "Installing Supercode CLI..."
   local output rc
-  output="$(npm install -g supercode-cli 2>&1)"
+  output="$(karnel_npm install -g supercode-cli 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if (( rc != 0 )); then
@@ -52,7 +53,7 @@ uninstall_supercode_cli() {
   fi
   log_info "Uninstalling Supercode CLI..."
   local output rc
-  output="$(npm uninstall -g supercode-cli 2>&1)"
+  output="$(karnel_npm uninstall -g supercode-cli 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if ((rc != 0)); then
@@ -72,7 +73,7 @@ update_supercode_cli() {
 
 _do_update_supercode_cli() {
   local output rc
-  output="$(npm update -g supercode-cli 2>&1)"
+  output="$(karnel_npm update -g supercode-cli 2>&1)"
   rc=$?
   printf '%s\n' "$output" | tail -3
   if ((rc != 0)); then

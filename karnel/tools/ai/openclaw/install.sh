@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -39,12 +40,12 @@ _install_openclaw_npm_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  npm install -g @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE" || {
+  karnel_npm install -g @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE" || {
     log_error "Failed to install OpenClaw dependencies"
     return 1
   }
 
-  if ! npm install -g openclaw@latest &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g openclaw@latest &>>"$LOG_FILE"; then
     log_error "Failed to install OpenClaw"
     return 1
   fi
@@ -84,7 +85,7 @@ uninstall_openclaw() {
 }
 
 _uninstall_openclaw_impl() {
-  if ! npm uninstall -g openclaw @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g openclaw @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE"; then
     log_error "Failed to uninstall OpenClaw"
     return 1
   fi
@@ -99,7 +100,7 @@ _update_openclaw_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm update -g openclaw @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g openclaw @larksuiteoapi/node-sdk nostr-tools @slack/web-api @whiskeysockets/baileys &>>"$LOG_FILE"; then
     log_error "Failed to update OpenClaw"
     return 1
   fi

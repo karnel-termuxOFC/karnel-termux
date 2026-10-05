@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -25,7 +26,7 @@ install_crush() {
   # Try npm first
   if command -v npm &>/dev/null; then
     log_info "Attempting npm install..."
-    if npm install -g @charmland/crush &>>"$LOG_FILE"; then
+    if karnel_npm install -g @charmland/crush &>>"$LOG_FILE"; then
     _fix_npm_shebang "crush" || return 1
       if command -v crush &>/dev/null; then
         record_managed_file "$(command -v crush)" "$CRUSH_MARKER" || return 1
@@ -88,7 +89,7 @@ uninstall_crush() {
     return 1
   fi
   log_info "Uninstalling Crush..."
-  npm uninstall -g @charmland/crush &>>"$LOG_FILE" || true
+  karnel_npm uninstall -g @charmland/crush &>>"$LOG_FILE" || true
   managed_file_matches "$crush_bin" "$CRUSH_MARKER" && rm -f "$crush_bin"
   if [ -e "$crush_bin" ]; then
     log_error "Crush changed during uninstall; preserving the current binary"
@@ -110,7 +111,7 @@ _do_update_crush() {
     log_error "Refusing to update a Crush installation not owned by Karnel"
     return 1
   fi
-  if ! npm install -g @charmland/crush &>>"$LOG_FILE" || ! command -v crush &>/dev/null; then
+  if ! karnel_npm install -g @charmland/crush &>>"$LOG_FILE" || ! command -v crush &>/dev/null; then
     log_error "Crush update failed; the previous installation was kept by npm"
     return 1
   fi

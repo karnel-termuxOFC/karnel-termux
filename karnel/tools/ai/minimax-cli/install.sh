@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -36,7 +37,7 @@ _install_minimax_cli_npm() {
 }
 
 _install_minimax_cli_npm_impl() {
-  if ! npm install -g mmx-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g mmx-cli &>>"$LOG_FILE"; then
     log_error "Failed to install MiniMax CLI"
     return 1
   fi
@@ -78,7 +79,7 @@ uninstall_minimax_cli() {
 }
 
 _uninstall_minimax_cli_impl() {
-  if ! npm uninstall -g mmx-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g mmx-cli &>>"$LOG_FILE"; then
     log_error "Failed to uninstall MiniMax CLI"
     return 1
   fi
@@ -90,7 +91,7 @@ update_minimax_cli() {
 }
 
 _update_minimax_cli_impl() {
-  if ! npm update -g mmx-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g mmx-cli &>>"$LOG_FILE"; then
     log_error "Failed to update MiniMax CLI"
     return 1
   fi

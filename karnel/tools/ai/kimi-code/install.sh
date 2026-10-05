@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -36,7 +37,7 @@ _install_kimi_code_npm() {
 }
 
 _install_kimi_code_npm_impl() {
-  if ! npm install -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
     log_error "Failed to install Kimi Code"
     return 1
   fi
@@ -78,7 +79,7 @@ uninstall_kimi_code() {
 }
 
 _uninstall_kimi_code_impl() {
-  if ! npm uninstall -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Kimi Code"
     return 1
   fi
@@ -90,7 +91,7 @@ update_kimi_code() {
 }
 
 _update_kimi_code_impl() {
-  if ! npm update -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g @moonshot-ai/kimi-code &>>"$LOG_FILE"; then
     log_error "Failed to update Kimi Code"
     return 1
   fi

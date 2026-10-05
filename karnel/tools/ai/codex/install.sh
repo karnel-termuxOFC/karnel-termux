@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -36,7 +37,7 @@ _install_codex_npm() {
 }
 
 _install_codex_npm_impl() {
-	if ! npm i -g @mmmbuto/codex-cli-termux@latest &>>"$LOG_FILE"; then
+	if ! karnel_npm i -g @mmmbuto/codex-cli-termux@latest &>>"$LOG_FILE"; then
 		log_error "Failed to install Codex CLI"
 		return 1
 	fi
@@ -76,7 +77,7 @@ uninstall_codex() {
 }
 
 _uninstall_codex_impl() {
-	if ! npm uninstall -g @mmmbuto/codex-cli-termux &>>"$LOG_FILE"; then
+	if ! karnel_npm uninstall -g @mmmbuto/codex-cli-termux &>>"$LOG_FILE"; then
 		log_error "Failed to uninstall Codex CLI"
 		return 1
 	fi
@@ -88,7 +89,7 @@ update_codex() {
 }
 
 _update_codex_impl() {
-	if ! npm update -g @mmmbuto/codex-cli-termux &>>"$LOG_FILE"; then
+	if ! karnel_npm update -g @mmmbuto/codex-cli-termux &>>"$LOG_FILE"; then
 		log_error "Failed to update Codex CLI"
 		return 1
 	fi

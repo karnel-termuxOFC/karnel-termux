@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -18,7 +19,7 @@ _netlify_node_supported() {
   local version required
   version="$(node --version 2>/dev/null | sed 's/^v//')"
   [[ -n "$version" ]] || return 1
-  required="$(npm view "netlify-cli@$NETLIFY_VERSION" engines.node 2>/dev/null | tr -d "'" | sed 's/[<>=~^ ]//g')"
+  required="$(karnel_npm view "netlify-cli@$NETLIFY_VERSION" engines.node 2>/dev/null | tr -d "'" | sed 's/[<>=~^ ]//g')"
   required="${required:-18.0.0}"
   [[ "$(printf '%s\n%s\n' "$required" "$version" | sort -V | head -1)" == "$required" ]]
 }
@@ -41,7 +42,7 @@ install_netlify() {
     return 1
   fi
   log_info "Installing Netlify CLI..."
-  if ! npm install -g "netlify-cli@$NETLIFY_VERSION" --legacy-peer-deps &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g "netlify-cli@$NETLIFY_VERSION" --legacy-peer-deps &>>"$LOG_FILE"; then
     log_error "Failed to install Netlify CLI (see $LOG_FILE)"
     return 1
   fi
@@ -65,7 +66,7 @@ uninstall_netlify() {
     return 2
   fi
   log_info "Uninstalling Netlify CLI..."
-  if ! npm uninstall -g netlify-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g netlify-cli &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Netlify CLI (see $LOG_FILE)"
     return 1
   fi
@@ -82,7 +83,7 @@ _do_update_netlify() {
     log_warn "Skipping update: Netlify CLI not managed by Karnel"
     return 2
   fi
-  if ! npm update -g netlify-cli --legacy-peer-deps &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g netlify-cli --legacy-peer-deps &>>"$LOG_FILE"; then
     log_error "Failed to update Netlify CLI (see $LOG_FILE)"
     return 1
   fi

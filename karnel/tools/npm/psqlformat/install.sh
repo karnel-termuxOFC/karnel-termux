@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_psqlformat_npm() {
 }
 
 _install_psqlformat_npm_impl() {
-  if ! npm install -g psqlformat &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g psqlformat &>>"$LOG_FILE"; then
     log_error "Failed to install psqlformat"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_psqlformat_npm() {
 }
 
 _uninstall_psqlformat_npm_impl() {
-  if ! npm uninstall -g psqlformat &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g psqlformat &>>"$LOG_FILE"; then
     log_error "Failed to uninstall PSQL Format"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_psqlformat_npm() {
 }
 
 _update_psqlformat_npm_impl() {
-  if ! npm update -g psqlformat &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g psqlformat &>>"$LOG_FILE"; then
     log_error "Failed to update PSQL Format"
     return 1
   fi

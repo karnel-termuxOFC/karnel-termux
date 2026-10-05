@@ -22,7 +22,14 @@ assert_search_is_literal() (
   export KARNEL_DATA="$TEST_ROOT/data"
   mkdir -p "$KARNEL_PATH/tools" "$KARNEL_DATA/brain"
   printf '# bracket [ memory\n' >"$KARNEL_DATA/brain/test.md"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   box() { :; }
   separator_section() { :; }
   list_item() { printf '%s\n' "$*"; }
@@ -36,7 +43,14 @@ assert_search_is_literal() (
 )
 
 assert_init_cancelled_before_writes() (
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_warn() { :; }
   read_confirm() { printf -v "$2" '%s' 'n'; }
   # shellcheck source=../karnel/cli/commands/init.sh
@@ -50,7 +64,14 @@ assert_go_uses_module_name() (
   local project="$TEST_ROOT/go-project"
   mkdir -p "$project"
   cd "$project"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_error() { :; }
   log_success() { :; }
   log_info() { :; }
@@ -80,7 +101,14 @@ assert_rust_docker_uses_package_name() (
   local project="$TEST_ROOT/rust-project"
   mkdir -p "$project"
   cd "$project"
-  import() { :; }
+  # Load the real npm helper so the wrapper under test actually exists;
+  # a no-op import leaves karnel_npm undefined and hides install failures.
+  import() {
+    if [[ "${1:-}" == "@/utils/npm" ]]; then
+      # shellcheck source=../karnel/utils/npm.sh
+      source "$ROOT_DIR/karnel/utils/npm.sh"
+    fi
+  }
   log_error() { :; }
   log_success() { :; }
   log_info() { :; }

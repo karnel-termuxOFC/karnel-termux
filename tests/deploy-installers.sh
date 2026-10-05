@@ -11,7 +11,14 @@ export HOME="$TEST_ROOT/home"
 export PATH="$PREFIX/bin:$PATH"
 mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
 
-import() { :; }
+# Load the real npm helper so the wrapper under test actually exists;
+# a no-op import leaves karnel_npm undefined and hides install failures.
+import() {
+  if [[ "${1:-}" == "@/utils/npm" ]]; then
+    # shellcheck source=../karnel/utils/npm.sh
+    source "$ROOT_DIR/karnel/utils/npm.sh"
+  fi
+}
 log_info() { :; }
 log_success() { :; }
 log_warn() { :; }

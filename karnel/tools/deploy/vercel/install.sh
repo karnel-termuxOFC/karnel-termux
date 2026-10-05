@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -27,7 +28,7 @@ install_vercel() {
     fi
   fi
   log_info "Installing Vercel CLI..."
-  if ! npm install -g vercel --legacy-peer-deps &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g vercel --legacy-peer-deps &>>"$LOG_FILE"; then
     log_error "Failed to install Vercel CLI (see $LOG_FILE)"
     return 1
   fi
@@ -47,7 +48,7 @@ uninstall_vercel() {
     return 2
   fi
   log_info "Uninstalling Vercel CLI..."
-  if ! npm uninstall -g vercel &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g vercel &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Vercel CLI (see $LOG_FILE)"
     return 1
   fi
@@ -64,7 +65,7 @@ _do_update_vercel() {
     log_warn "Skipping update: Vercel CLI not managed by Karnel"
     return 2
   fi
-  if ! npm update -g vercel --legacy-peer-deps &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g vercel --legacy-peer-deps &>>"$LOG_FILE"; then
     log_error "Failed to update Vercel CLI (see $LOG_FILE)"
     return 1
   fi

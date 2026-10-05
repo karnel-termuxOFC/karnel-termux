@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -24,7 +25,7 @@ _install_vercel_npm() {
 }
 
 _install_vercel_npm_impl() {
-  if ! npm install -g vercel &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g vercel &>>"$LOG_FILE"; then
     log_error "Failed to install Vercel CLI"
     return 1
   fi
@@ -52,7 +53,7 @@ _uninstall_vercel_npm() {
 }
 
 _uninstall_vercel_npm_impl() {
-  if ! npm uninstall -g vercel &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g vercel &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Vercel CLI"
     return 1
   fi
@@ -77,7 +78,7 @@ _update_vercel_npm() {
 }
 
 _update_vercel_npm_impl() {
-  if ! npm update -g vercel &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g vercel &>>"$LOG_FILE"; then
     log_error "Failed to update Vercel CLI"
     return 1
   fi

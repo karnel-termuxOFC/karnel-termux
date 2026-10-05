@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+import "@/utils/npm"
 import "@/utils/npm-shebang"
 
 import "@/utils/log"
@@ -108,9 +109,9 @@ script-shell=/data/data/com.termux/files/usr/bin/sh
 allow-scripts=walkie-sh,udx-native,sodium-native
 NPMRCEOF
 
-  if ! npm install --production --no-audit --no-fund &>>"$LOG_FILE"; then
+  if ! karnel_npm install --production --no-audit --no-fund &>>"$LOG_FILE"; then
     log_warn "npm install failed, trying with --ignore-scripts..."
-    npm install --production --no-audit --no-fund --ignore-scripts &>>"$LOG_FILE"
+    karnel_npm install --production --no-audit --no-fund --ignore-scripts &>>"$LOG_FILE"
   fi
 
   popd &>/dev/null || true
@@ -124,11 +125,11 @@ NPMRCEOF
 _walkie_install_global() {
   local spec="$1"
 
-  if ! npm install -g "$spec" --no-audit --no-fund --no-bin-links --allow-scripts=walkie-sh,udx-native,sodium-native &>>"$LOG_FILE"; then
-  _fix_npm_shebang "walkie" || return 1
+  if ! karnel_npm install -g "$spec" --no-audit --no-fund --no-bin-links --allow-scripts=walkie-sh,udx-native,sodium-native &>>"$LOG_FILE"; then
     log_warn "npm install failed, trying with --ignore-scripts..."
-    npm install -g "$spec" --no-audit --no-fund --no-bin-links --allow-scripts=walkie-sh,udx-native,sodium-native --ignore-scripts &>>"$LOG_FILE"
+    karnel_npm install -g "$spec" --no-audit --no-fund --no-bin-links --allow-scripts=walkie-sh,udx-native,sodium-native --ignore-scripts &>>"$LOG_FILE"
   fi
+  _fix_npm_shebang "walkie" || return 1
 }
 
 # Generic installer: local first, fallback to global on failure.

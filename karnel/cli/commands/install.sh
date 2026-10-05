@@ -235,14 +235,11 @@ _install_specific_tools() {
             IFS=',' read -ra _bin_list <<< "$bins"
             for _bin in "${_bin_list[@]}"; do
               if command -v "$_bin" &>/dev/null; then
-                # Check if it is a stub
                 local _bin_path
                 _bin_path=$(command -v "$_bin")
-                if [ -f "$_bin_path" ] && [ -x "$_bin_path" ]; then
-                  if ! grep -qiE "offline|unreachable|not.available|stub|indisponivel|inacessivel" "$_bin_path" 2>/dev/null || [ "$(head -c 2 "$_bin_path")" != "#!" ]; then
-                    found_bin="$_bin"
-                    break
-                  fi
+                if [ -f "$_bin_path" ] && [ -x "$_bin_path" ] && ! karnel_is_stub_binary "$_bin_path"; then
+                  found_bin="$_bin"
+                  break
                 fi
               fi
             done

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+import "@/utils/npm"
 import "@/utils/log"
 import "@/utils/version"
 import "@/utils/npm-shebang"
@@ -39,7 +40,7 @@ _install_gemini_cli_npm_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm install -g @google/gemini-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm install -g @google/gemini-cli &>>"$LOG_FILE"; then
     log_error "Failed to install Gemini CLI"
     return 1
   fi
@@ -80,7 +81,7 @@ uninstall_gemini_cli() {
 }
 
 _uninstall_gemini_cli_impl() {
-  if ! npm uninstall -g @google/gemini-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm uninstall -g @google/gemini-cli &>>"$LOG_FILE"; then
     log_error "Failed to uninstall Gemini CLI"
     return 1
   fi
@@ -95,7 +96,7 @@ _update_gemini_cli_impl() {
   export GYP_DEFINES="android_ndk_path=''"
   export ANDROID_API_LEVEL=24
 
-  if ! npm update -g @google/gemini-cli &>>"$LOG_FILE"; then
+  if ! karnel_npm update -g @google/gemini-cli &>>"$LOG_FILE"; then
     log_error "Failed to update Gemini CLI"
     return 1
   fi
