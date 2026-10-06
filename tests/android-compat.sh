@@ -4,7 +4,6 @@ set -uo pipefail
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
-SYSTEM_RM=$(command -v rm)
 SYSTEM_HEAD=$(command -v head)
 
 pass=0
@@ -47,6 +46,7 @@ setup_compat_env() {
   {
     printf '%s\n' "#!$bash_bin"
     printf '%s\n' "# fake glibc loader: --library-path <path> <binary> [args...]"
+    # shellcheck disable=SC2016  # \$1 must expand when the fake loader runs
     printf '%s\n' '[[ "${1:-}" == "--library-path" ]] && shift 2'
     printf '%s\n' 'exec "$@"'
   } >"$KARNEL_GLIBC_ROOT/lib/ld-linux-aarch64.so.1"
@@ -145,11 +145,16 @@ assert_adapt_only_touches_glibc() (
   compat_adapt_installed "gamma"
 
   head -n 2 "$glibc_tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
-  [[ ! -e "$glibc_tool.karnel-real" || -f "$glibc_tool.karnel-real" ]]
   [[ -f "$glibc_tool.karnel-real" ]]
-  ! head -n 2 "$native_tool" | grep -qF "$COMPAT_WRAPPER_MARKER"
+  if head -n 2 "$native_tool" | grep -qF "$COMPAT_WRAPPER_MARKER"; then
+    printf '%s\n' "native binary must not be wrapped" >&2
+    return 1
+  fi
   [[ ! -e "$native_tool.karnel-real" ]]
-  ! head -n 2 "$script" | grep -qF "$COMPAT_WRAPPER_MARKER"
+  if head -n 2 "$script" | grep -qF "$COMPAT_WRAPPER_MARKER"; then
+    printf '%s\n' "plain script must not be wrapped" >&2
+    return 1
+  fi
   # Adapting something that is not on PATH is a no-op, never a failure.
   compat_adapt_installed "definitely-not-installed"
 )
