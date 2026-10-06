@@ -258,6 +258,31 @@ assert_detection_matches_readelf() (
   esac
 )
 
+# $PREFIX/bin/npm is a symlink into node_modules; repairing it must edit the
+# target's shebang, not replace the link with a detached copy.
+assert_fix_shebang_edits_the_target_of_a_symlink() (
+  setup_compat_env
+  local dir="$PREFIX/pkg/bin" link
+  mkdir -p "$dir"
+  printf '%s\n' '#!/usr/bin/env bash' 'printf "ran-ok\n"' >"$dir/tool.js"
+  chmod +x "$dir/tool.js"
+  link="$PREFIX/bin/tool"
+  ln -s "../pkg/bin/tool.js" "$link"
+
+  compat_fix_shebang "$link"
+  [[ -L "$link" ]]
+  [[ "$(readlink "$link")" == "../pkg/bin/tool.js" ]]
+  head -n 1 "$dir/tool.js" | grep -qF "#!$(command -v bash)"
+  [[ "$("$link")" == "ran-ok" ]]
+  # Already runnable now: a second pass must report 2 and change nothing.
+  local rc=0
+  compat_fix_shebang "$link" || rc=$?
+  [[ "$rc" -eq 2 ]]
+  [[ -L "$link" ]]
+  head -n 1 "$dir/tool.js" | grep -qF "#!$(command -v bash)"
+)
+
+run_test "fix_shebang repairs a symlinked entry without replacing the link" assert_fix_shebang_edits_the_target_of_a_symlink
 run_test "classify separates glibc, native, script, unknown and missing" assert_classify
 run_test "the glibc loader is resolved from the sysroot" assert_loader_is_found_in_the_sysroot
 run_test "wrap runs the binary through the loader and unwraps cleanly" assert_wrap_runs_and_is_reversible

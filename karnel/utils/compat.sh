@@ -240,7 +240,16 @@ compat_adapt() {
 # Returns 0 when the file was changed, 2 when it already ran, 1 when no
 # interpreter could be resolved.
 compat_fix_shebang() {
-  local file="$1" first line interp prog args resolved new
+  local file="$1" link="$1" first line interp prog args resolved new real
+  [[ -f "$file" && -r "$file" ]] || return 2
+  # Edit the target of a symlink, never the link itself: `sed -i` unlinks and
+  # re-creates its argument, so running it on $PREFIX/bin/npm would replace
+  # that symlink with a detached copy of npm-cli.js whose relative
+  # require('../lib/cli.js') then resolves from $PREFIX/bin instead of
+  # node_modules/npm. The target is what carries the shebang anyway.
+  if real="$(readlink -f -- "$file" 2>/dev/null)" && [[ -n "$real" && -f "$real" ]]; then
+    file="$real"
+  fi
   [[ -f "$file" && -r "$file" ]] || return 2
   IFS= read -r first <"$file" || true
   [[ "$first" == '#!'* ]] || return 2
@@ -272,7 +281,7 @@ compat_fix_shebang() {
   new="${new//&/\\&}"
   new="${new//|/\\|}"
   sed -i "1s|.*|$new|" -- "$file" || return 1
-  log_info "compat: fixed shebang of $file -> $new"
+  log_info "compat: fixed shebang of $link -> $new"
   return 0
 }
 
