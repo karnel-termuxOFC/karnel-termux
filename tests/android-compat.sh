@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2031  # compat.sh is sourced inside setup_compat_env's subshell
 set -uo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -57,6 +58,7 @@ setup_compat_env() {
   source "$ROOT_DIR/karnel/utils/compat.sh"
   log_info() { :; }
   log_error() { :; }
+  log_warn() { :; }
 
   compat_is_elf() { [[ "$(basename -- "$1")" == *fake-elf ]]; }
   compat_is_glibc_elf() { [[ "$(basename -- "$1")" == *glibc-fake-elf ]]; }
@@ -282,6 +284,102 @@ assert_fix_shebang_edits_the_target_of_a_symlink() (
   head -n 1 "$dir/tool.js" | grep -qF "#!$(command -v bash)"
 )
 
+# The fake sysroot ships a helper that only exists in its bin/ directory, so a
+# tier-2 wrapper cannot run the tool but a tier-3 one can.
+assert_escalates_to_the_glibc_userland() (
+  setup_compat_env
+  local tool="$PREFIX/bin/deploy.glibc-fake-elf"
+  make_glibc_tool "$tool"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'glibconly "$@"'
+  } >"$tool"
+  chmod +x "$tool"
+  mkdir -p "$KARNEL_GLIBC_ROOT/bin"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'printf "userland-ok\n"'
+  } >"$KARNEL_GLIBC_ROOT/bin/glibconly"
+  chmod +x "$KARNEL_GLIBC_ROOT/bin/glibconly"
+
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_LOADER" ]]
+  if compat_probe "$tool"; then
+    printf '%s\n' "tier 2 should not have run the tool" >&2
+    return 1
+  fi
+
+  compat_adapt "$tool"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_USERLAND" ]]
+  [[ -f "$tool.karnel-real" ]]
+  compat_probe "$tool"
+)
+
+# Nothing works at any tier: the wrapper must drop back to the plain loader
+# and adaptation must still report success.
+assert_falls_back_to_the_loader_when_no_tier_helps() (
+  setup_compat_env
+  local tool="$PREFIX/bin/hopeless.glibc-fake-elf"
+  make_glibc_tool "$tool"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'definitely-not-installed-anywhere "$@"'
+  } >"$tool"
+  chmod +x "$tool"
+
+  compat_adapt "$tool"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_LOADER" ]]
+  [[ -f "$tool.karnel-real" ]]
+)
+
+# Re-tiering must only rewrite the launcher; the parked original stays put.
+assert_retiering_keeps_the_parked_original() (
+  setup_compat_env
+  local tool="$PREFIX/bin/retier.glibc-fake-elf" first
+  make_glibc_tool "$tool"
+
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  [[ -f "$tool.karnel-real" ]]
+  first="$(cksum <"$tool.karnel-real")"
+
+  compat_wrap "$tool" "$COMPAT_TIER_USERLAND"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_USERLAND" ]]
+  [[ -f "$tool.karnel-real" ]]
+  [[ "$first" == "$(cksum <"$tool.karnel-real")" ]]
+  # Back again.
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_LOADER" ]]
+  [[ "$first" == "$(cksum <"$tool.karnel-real")" ]]
+)
+
+# The synthetic FHS root is assembled once out of the installed sysroot.
+assert_proot_root_is_built_once() (
+  setup_compat_env
+  local root rc=0
+  export KARNEL_DATA="$TEST_ROOT/kdata"
+  root="$(compat_proot_root)" || rc=$?
+  [[ "$rc" -eq 0 ]]
+  [[ -d "$root/lib" && -d "$root/usr/lib" && -d "$root/usr/share" && -d "$root/etc" ]]
+  [[ -f "$root/.ready" ]]
+  [[ "$(compat_proot_root)" == "$root" ]]
+)
+
+# A tier-4 wrapper must never be written without a usable root behind it:
+# `proot -r ''` fails on every invocation and looks like a broken tool.
+assert_proot_tier_is_refused_without_a_root() (
+  setup_compat_env
+  local out="$TEST_ROOT/no-root.sh" rc=0
+  unset KARNEL_DATA KARNEL_COMPAT_ROOT
+  _compat_write_wrapper "$out" /somewhere/tool /some/ld.so "$COMPAT_TIER_PROOT" || rc=$?
+  [[ "$rc" -ne 0 ]]
+  [[ ! -e "$out" ]]
+)
+
+run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
+run_test "adaptation falls back to the loader when no tier helps" assert_falls_back_to_the_loader_when_no_tier_helps
+run_test "re-tiering keeps the parked original byte-identical" assert_retiering_keeps_the_parked_original
+run_test "the synthetic proot root is built once and reused" assert_proot_root_is_built_once
+run_test "the proot tier is refused when no root can be built" assert_proot_tier_is_refused_without_a_root
 run_test "fix_shebang repairs a symlinked entry without replacing the link" assert_fix_shebang_edits_the_target_of_a_symlink
 run_test "classify separates glibc, native, script, unknown and missing" assert_classify
 run_test "the glibc loader is resolved from the sysroot" assert_loader_is_found_in_the_sysroot
