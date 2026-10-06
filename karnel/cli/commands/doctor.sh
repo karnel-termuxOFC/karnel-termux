@@ -2,6 +2,7 @@
 
 import "@/utils/log"
 import "@/utils/colors"
+import "@/utils/compat"
 
 doctor_main() {
   local subcommand="${1:-termux}"
@@ -769,19 +770,31 @@ doctor_termux() {
   separator_section "Binary & Shebang Health"
   echo
 
-  # Check for bad shebangs (#!/usr/bin/env) in PREFIX/bin (fast grep)
+  # Interpreters that do not exist on this device. Android has no /usr, so
+  # every "#!/usr/bin/env node" the kernel meets answers ENOENT and the shell
+  # reports 126, even though node itself is installed. The check is on the
+  # interpreter path rather than on the literal "#!/usr/bin/env" prefix, so a
+  # shebang pointing at a stale absolute path is caught too.
   local bad_shebangs=0
-  local bad_files
-  bad_files=$(timeout 10 rg -l "^#!/usr/bin/env" "$PREFIX/bin/" 2>/dev/null || true)
-  if [[ -n "$bad_files" ]]; then
-    bad_shebangs=$(echo "$bad_files" | wc -l)
-    log_warn "$bad_shebangs binary(s) with #!/usr/bin/env — will fail on Termux"
-    echo "$bad_files" | while IFS= read -r f; do
-      list_item "$(basename "$f")"
+  bad_shebangs="$(timeout 20 compat_count_broken_shebangs "$PREFIX/bin" 2>/dev/null)"
+  bad_shebangs="${bad_shebangs:-0}"
+  if [[ "$bad_shebangs" =~ ^[0-9]+$ ]] && ((bad_shebangs > 0)); then
+    log_warn "$bad_shebangs binary(s) point at an interpreter that does not exist"
+    local sb_file sb_name
+    for sb_file in "$PREFIX/bin"/*; do
+      [[ -f "$sb_file" && -r "$sb_file" ]] || continue
+      IFS= read -r sb_head <"$sb_file" 2>/dev/null || continue
+      [[ "$sb_head" == '#!'* ]] || continue
+      sb_name="${sb_head#\#!}"
+      sb_name="${sb_name# }"
+      sb_name="${sb_name%% *}"
+      if [[ "$sb_name" == /* && ! -x "$sb_name" ]]; then
+        list_item "$(basename "$sb_file") ($sb_name)"
+      fi
     done
     ((warnings++))
-    fix_commands+=("karnel install npm 2>/dev/null || true")
-    fix_descriptions+=("Reinstall npm tools to fix shebangs")
+    fix_commands+=("karnel doctor --fix")
+    fix_descriptions+=("Repoint $bad_shebangs shebang(s) at their Termux interpreter")
     fix_callbacks+=("_fix_npm_shebangs")
   else
     log_success "All binaries have valid shebangs"
@@ -961,6 +974,53 @@ doctor_termux() {
     log_success "proot: available"
   else
     log_info "proot not installed (optional)"
+  fi
+
+  # ===== ANDROID COMPATIBILITY LAYER =====
+  echo
+  separator_section "Android Compatibility Layer"
+  echo
+  # A foreign (glibc) binary cannot be started by the Android kernel at all;
+  # karnel hands it to the loader from the glibc sysroot instead. This block
+  # reports which of the three tiers are reachable and how many tools are
+  # currently riding them.
+  local compat_root compat_wrapped=0 compat_entry compat_fixable
+  if compat_glibc_ready; then
+    compat_root="$(compat_glibc_root)"
+    log_success "glibc sysroot: available ($compat_root)"
+  else
+    log_info "glibc sysroot: not installed (required to run glibc-only tools)"
+    fix_commands+=("pkg install -y glibc-repo glibc")
+    fix_descriptions+=("Install the glibc sysroot so foreign binaries can run")
+    fix_callbacks+=("_fix_pkg_install")
+  fi
+
+  for compat_entry in "$PREFIX/bin"/*; do
+    [[ -f "$compat_entry" ]] || continue
+    if _compat_is_wrapper "$compat_entry"; then
+      compat_wrapped=$((compat_wrapped + 1))
+    fi
+  done
+  if ((compat_wrapped > 0)); then
+    log_success "$compat_wrapped tool(s) running through the compatibility wrapper"
+  else
+    log_info "no tool on PATH currently needs a compatibility wrapper"
+  fi
+
+  if compat_proot_available; then
+    log_success "proot: available (tier 4 for binaries that hardcode /usr or /etc)"
+  elif command -v proot >/dev/null 2>&1; then
+    log_info "proot: installed, but the FHS root could not be assembled"
+  else
+    log_info "proot: not installed (optional; only needed for absolute-path tools)"
+  fi
+
+  compat_fixable="$(timeout 20 compat_count_broken_shebangs "$PREFIX/bin" 2>/dev/null)"
+  compat_fixable="${compat_fixable:-0}"
+  if [[ "$compat_fixable" =~ ^[0-9]+$ ]] && ((compat_fixable > 0)); then
+    log_warn "$compat_fixable shebang(s) still point at a missing interpreter"
+  else
+    log_success "every shebang in $PREFIX/bin resolves"
   fi
 
   # ===== TERMUX:API =====

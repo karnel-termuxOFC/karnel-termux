@@ -4,6 +4,7 @@
 import "@/utils/log"
 import "@/utils/colors"
 import "@/utils/install"
+import "@/utils/compat"
 
 _fix_storage() {
   termux-setup-storage 2>/dev/null
@@ -219,19 +220,13 @@ _fix_pip_check() {
 }
 
 _fix_npm_shebangs() {
-  local fixed=0
-  for f in "$PREFIX/bin/"*; do
-    [[ -f "$f" ]] || continue
-    local shebang
-		shebang=$(head -1 "$f" 2>/dev/null | tr -d '\0\r' | xargs)
-		if [[ "$shebang" == "#!/usr/bin/env node" ]]; then
-      sed -i "1s|^.*$|#!$PREFIX/bin/node|" "$f" && ((fixed++))
-    elif [[ "$shebang" == "#!/usr/bin/env bash" ]] || [[ "$shebang" == "#!/usr/bin/env sh" ]]; then
-      sed -i "1s|^.*$|#!$PREFIX/bin/bash|" "$f" && ((fixed++))
-    elif [[ "$shebang" == "#!/usr/bin/env python3" ]] || [[ "$shebang" == "#!/usr/bin/env python" ]]; then
-      sed -i "1s|^.*$|#!$PREFIX/bin/python3|" "$f" && ((fixed++))
-    fi
-  done
+  # Delegates to the compatibility layer instead of sed-ing $PREFIX/bin
+  # itself: most of those entries are symlinks into node_modules, and
+  # `sed -i` unlinks its argument, which would replace npm's symlink with a
+  # detached copy whose relative require() resolves from the wrong directory.
+  # compat_fix_shebang edits the target and copes with any interpreter, not
+  # just node/bash/python3.
+  compat_fix_shebangs "$PREFIX/bin" >/dev/null 2>&1
   return 0
 }
 
