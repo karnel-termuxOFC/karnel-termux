@@ -6,6 +6,14 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.0
+
+- **Three-tier compatibility layer:** a foreign glibc binary is no longer handled by one fixed trick. `compat_adapt` wraps, probes and climbs to the cheapest tier that actually starts the tool — the glibc loader alone (free, installs nothing), the glibc userland (`$PREFIX/glibc/bin`, 383 glibc tools, prepended to `PATH` together with the glibc exec shim so child processes resolve the same way), or proot over a synthetic `/lib`, `/usr` and `/etc` assembled from the sysroot already on the device. That last tier replaces `proot-distro install ubuntu` for binaries that merely hardcode an absolute path, and it downloads nothing. A tier that cannot be reached is refused before the wrapper is written, so `proot -r ''` can never ship, and every step unwraps back to `<path>.karnel-real`.
+- **Shebang repair that survives symlinks:** `compat_fix_shebang` edits the target of a link rather than the link itself. `sed -i` unlinks its argument, so repairing `$PREFIX/bin/npm` used to replace that symlink with a detached copy of `npm-cli.js` whose relative `require('../lib/cli.js')` then resolved from `$PREFIX/bin` — one broken `npm` traded for another. The same bug was live in `karnel doctor`, whose `_fix_npm_shebangs` ran `sed -i` over every entry in `$PREFIX/bin`.
+- **`npm` and the CLIs on top of it were dead on arrival:** Android has no `/usr`, so `#!/usr/bin/env node` exits 126 with `bad interpreter` even though node is installed, and none of the three `termux-exec` preloads intercepts the kernel's shebang resolution. `npm`, `npx`, `kc`, `kcode`, `keel`, `snyk`, `httptmuxd`, `gdbus-codegen`, `glib-genmarshal` and `glib-mkenums` all now resolve to their Termux interpreter; `$PREFIX/bin` reports 0 unresolvable shebangs.
+- **Doctor:** the check asks whether the interpreter path exists instead of grepping for the literal `#!/usr/bin/env`, so a stale absolute path is caught and a resolvable `env` line is left alone; the fix delegates to the compatibility layer; a new *Android Compatibility Layer* section reports the glibc sysroot, how many tools are riding a wrapper, whether proot is reachable for the FHS tier, and any shebang that still does not resolve.
+- **Tests:** `tests/android-compat.sh` covers classification, wrapping, re-tiering without disturbing the parked original, escalation, falling back when no tier helps, building the FHS root exactly once, refusing tier 4 without a root, shebang repair through a symlink, and agreement with `readelf` (17 cases).
+
 ## 4.17.45
 
 - **npm on a real Termux host:** every npm call goes through `karnel_npm()`, which runs npm through `node` when its `#!/usr/bin/env node` shebang cannot be executed (Termux ships no `/usr`, so the kernel answered `bad interpreter`) and retries with `--force` only on `EBADPLATFORM`. The remaining bare `npm install/uninstall/update/view/ls` calls in the installers were converted; guests inside proot keep plain npm.
