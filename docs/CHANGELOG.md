@@ -6,6 +6,12 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.1
+
+- **The ladder is reachable from every installer, not just Freebuff:** `compat_adapt_installed()` is the single entry point behind `_tool_compat_adapt` (utils/tools.sh), `_ai_tool_compat_adapt` (tools/ai/all.sh) and the post-install loop in `cli/commands/install.sh`, so it already covered all 16 categories — but it only ever called `compat_wrap()`, which stops at the loader tier. Tiers 3 (glibc userland) and 4 (proot FHS root) were reachable solely from Freebuff's `compat_adapt()` call, which is why no other tool could ever climb above tier 2. It now escalates after wrapping, and re-probes wrappers already on disk so a tool that stops starting at its current tier climbs on the next install or update instead of staying broken behind a launcher nobody re-examines.
+- **No cost for what already runs:** native binaries, scripts and plain files still return before any probe, so the added `--version` probe applies only to tools that actually needed a wrapper — the hundreds of native entries in a Termux prefix are untouched.
+- **Tests:** three new cases pin the behaviour (ladder reachable from the installer path, existing wrappers re-evaluated, natives never probed — the last with a positive control so its zero cannot pass vacuously). Each was proven to fail first: dropping the escalation fails 3 cases, probing natives fails the efficiency case alone, removing tier 3's `PATH` export fails the 3 ladder cases, and letting tier 4 write a wrapper without a root fails the refusal case alone. The suite runs 20 cases in 7 seconds.
+
 ## 4.18.0
 
 - **Three-tier compatibility layer:** a foreign glibc binary is no longer handled by one fixed trick. `compat_adapt` wraps, probes and climbs to the cheapest tier that actually starts the tool — the glibc loader alone (free, installs nothing), the glibc userland (`$PREFIX/glibc/bin`, 383 glibc tools, prepended to `PATH` together with the glibc exec shim so child processes resolve the same way), or proot over a synthetic `/lib`, `/usr` and `/etc` assembled from the sysroot already on the device. That last tier replaces `proot-distro install ubuntu` for binaries that merely hardcode an absolute path, and it downloads nothing. A tier that cannot be reached is refused before the wrapper is written, so `proot -r ''` can never ship, and every step unwraps back to `<path>.karnel-real`.
