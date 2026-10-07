@@ -6,6 +6,13 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.2
+
+- **Wrappers no longer hand a preload to glibc.** `login(1)` exports `LD_PRELOAD=$PREFIX/lib/libtermux-exec-ld-preload.so`, a bionic object; glibc's `ld.so` cannot load it, so every wrapped tool died before `main()` with `.../glibc/lib/libc.so: invalid ELF header`. Tier 3's own preload was fatal in the other direction: exporting the glibc `libtermux-exec.so` shim left every bionic child of the tool failing with `library "libc.so.6" not found`. Every wrapper now starts with `unset LD_PRELOAD`, and tier 3 exports `PATH` only.
+- **Wrappers written by older Karnels are refreshed.** `compat_wrapper_is_current()` checks the invariants the current code emits; when one is missing the wrapper is rewritten in place before `compat_escalate` probes it, so a stale launcher can no longer keep a tool pinned to a tier it no longer reaches.
+- **An orphaned parked copy no longer blocks adaptation.** Freebuff's own entry re-extracts its runtime in place, dropping a raw ELF over the wrapper and leaving `.karnel-real` behind; `compat_wrap` refused to touch that file, so the tool could never be adapted again — which is how `karnel install ai --freebuff` ended in "does not start at any tier" and then "Freebuff runtime still does not run after repair". Identical bytes are dropped (a 130 MB runtime is not copied to prove a point) and a different copy is parked as `.karnel-real.stale`.
+- **Tests.** Four new cases pin the behaviour — no wrapper hands a preload to the loader on tier 2 or tier 3, a launcher from an older karnel is refreshed in place, an orphaned parked copy does not block adaptation — in a suite of 23 cases running in 8 seconds. Every branch was proven to fail first: removing the `unset` fails 2 cases, restoring the tier 3 preload fails 5, dropping the refresh fails 1, restoring the refusal fails 1, and always discarding the orphan fails 1.
+
 ## 4.18.1
 
 - **The ladder is reachable from every installer, not just Freebuff:** `compat_adapt_installed()` is the single entry point behind `_tool_compat_adapt` (utils/tools.sh), `_ai_tool_compat_adapt` (tools/ai/all.sh) and the post-install loop in `cli/commands/install.sh`, so it already covered all 16 categories — but it only ever called `compat_wrap()`, which stops at the loader tier. Tiers 3 (glibc userland) and 4 (proot FHS root) were reachable solely from Freebuff's `compat_adapt()` call, which is why no other tool could ever climb above tier 2. It now escalates after wrapping, and re-probes wrappers already on disk so a tool that stops starting at its current tier climbs on the next install or update instead of staying broken behind a launcher nobody re-examines.
