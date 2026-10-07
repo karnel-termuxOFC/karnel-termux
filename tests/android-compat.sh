@@ -399,8 +399,68 @@ assert_adapt_installed_climbs_the_ladder() (
   compat_probe "$tool"
 )
 
+# A wrapper already on disk must be re-probed: a tool that stops starting at
+# its current tier climbs on the next install or update instead of staying
+# broken behind a launcher nobody re-examines.
+assert_existing_wrapper_is_reevaluated() (
+  setup_compat_env
+  local tool="$PREFIX/bin/reeval.glibc-fake-elf"
+  make_glibc_tool "$tool"
+  compat_adapt_installed "reeval.glibc-fake-elf"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_LOADER" ]]
+
+  # The binary behind the wrapper now needs the glibc userland on PATH.
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'glibconly "$@"'
+  } >"$tool.karnel-real"
+  mkdir -p "$KARNEL_GLIBC_ROOT/bin"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'printf "userland-ok\n"'
+  } >"$KARNEL_GLIBC_ROOT/bin/glibconly"
+  chmod +x "$KARNEL_GLIBC_ROOT/bin/glibconly"
+
+  compat_adapt_installed "reeval.glibc-fake-elf"
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_USERLAND" ]]
+  compat_probe "$tool"
+)
+
+# Climbing the ladder must stay free for everything that already runs. A
+# Termux prefix carries hundreds of native binaries; probing each with
+# --version on every install would cost more than the layer saves. The second
+# half is a positive control so the zero above cannot pass vacuously.
+assert_adapt_installed_never_probes_native_tools() (
+  setup_compat_env
+  local probes=0 glibc_tool="$PREFIX/bin/lean.glibc-fake-elf"
+  compat_probe() { probes=$((probes + 1)); return 0; }
+
+  make_glibc_tool "$PREFIX/bin/lean-native-fake-elf"
+  printf '%s\n' '#!/bin/sh' 'echo hi' >"$PREFIX/bin/lean.sh"
+  printf '%s\n' 'plain text' >"$PREFIX/bin/lean.txt"
+
+  compat_adapt_installed "lean-native-fake-elf"
+  compat_adapt_installed "lean.sh"
+  compat_adapt_installed "lean.txt"
+  compat_adapt_installed "no-such-tool"
+  if [[ "$probes" -ne 0 ]]; then
+    printf 'native entries were probed %d time(s)\n' "$probes" >&2
+    return 1
+  fi
+
+  make_glibc_tool "$glibc_tool"
+  compat_adapt_installed "lean.glibc-fake-elf"
+  if [[ "$probes" -ne 1 ]]; then
+    printf 'expected exactly one probe for the wrapped tool, saw %d\n' "$probes" >&2
+    return 1
+  fi
+  [[ "$(compat_wrapper_tier "$glibc_tool")" == "$COMPAT_TIER_LOADER" ]]
+)
+
 run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
 run_test "adapt_installed climbs the ladder on the installer path" assert_adapt_installed_climbs_the_ladder
+run_test "an existing wrapper is re-evaluated on the next install" assert_existing_wrapper_is_reevaluated
+run_test "adapt_installed never probes native, script or text entries" assert_adapt_installed_never_probes_native_tools
 run_test "adaptation falls back to the loader when no tier helps" assert_falls_back_to_the_loader_when_no_tier_helps
 run_test "re-tiering keeps the parked original byte-identical" assert_retiering_keeps_the_parked_original
 run_test "the synthetic proot root is built once and reused" assert_proot_root_is_built_once
