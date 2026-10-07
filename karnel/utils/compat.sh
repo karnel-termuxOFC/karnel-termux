@@ -507,10 +507,17 @@ compat_adapt_installed() {
   real="$(readlink -f -- "$path" 2>/dev/null || printf '%s' "$path")"
   [[ -f "$real" && -x "$real" ]] || return 0
   if _compat_is_wrapper "$real"; then
+    # Already wrapped: re-probe it, so a binary that later stops starting at
+    # this tier climbs instead of being handed to the user as-is. Escalation
+    # is what every installer reaches through this function; only freebuff
+    # calls compat_adapt() directly, so without this the glibc userland and
+    # proot tiers would stay unreachable for the rest of the catalog.
+    compat_escalate "$real" || true
     return 0
   fi
   if compat_is_glibc_elf "$real"; then
     compat_wrap "$real" || true
+    compat_escalate "$real" || true
   fi
   return 0
 }

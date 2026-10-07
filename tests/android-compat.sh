@@ -375,7 +375,32 @@ assert_proot_tier_is_refused_without_a_root() (
   [[ ! -e "$out" ]]
 )
 
+# Every installer reaches the layer through compat_adapt_installed (tools.sh,
+# ai/all.sh and install.sh), not through freebuff's compat_adapt call, so the
+# ladder has to climb there too or tiers 3 and 4 would exist only for freebuff.
+assert_adapt_installed_climbs_the_ladder() (
+  setup_compat_env
+  local tool="$PREFIX/bin/installed.glibc-fake-elf"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'glibconly "$@"'
+  } >"$tool"
+  chmod +x "$tool"
+  mkdir -p "$KARNEL_GLIBC_ROOT/bin"
+  {
+    printf '%s\n' "#!$(command -v bash)"
+    printf '%s\n' 'printf "userland-ok\n"'
+  } >"$KARNEL_GLIBC_ROOT/bin/glibconly"
+  chmod +x "$KARNEL_GLIBC_ROOT/bin/glibconly"
+
+  compat_adapt_installed "installed.glibc-fake-elf"
+  [[ -f "$tool.karnel-real" ]]
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_USERLAND" ]]
+  compat_probe "$tool"
+)
+
 run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
+run_test "adapt_installed climbs the ladder on the installer path" assert_adapt_installed_climbs_the_ladder
 run_test "adaptation falls back to the loader when no tier helps" assert_falls_back_to_the_loader_when_no_tier_helps
 run_test "re-tiering keeps the parked original byte-identical" assert_retiering_keeps_the_parked_original
 run_test "the synthetic proot root is built once and reused" assert_proot_root_is_built_once
