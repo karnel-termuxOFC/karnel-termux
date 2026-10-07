@@ -206,6 +206,19 @@ compat_wrapper_tier() {
   esac
 }
 
+# A wrapper written by an older karnel is still a wrapper, but it may hand
+# LD_PRELOAD straight to the glibc loader and die in a login shell. Returns 0
+# only when the launcher carries every invariant the current code emits.
+compat_wrapper_is_current() {
+  local file="$1"
+  _compat_is_wrapper "$file" || return 1
+  grep -qF 'unset LD_PRELOAD' -- "$file" 2>/dev/null || return 1
+  if grep -qF 'export LD_PRELOAD' -- "$file" 2>/dev/null; then
+    return 1
+  fi
+  return 0
+}
+
 # Builds (once) a synthetic filesystem root out of the glibc sysroot that is
 # already on the device. proot then maps /lib, /usr and /etc onto it, which is
 # everything a binary that hardcodes those paths needs -- for a few kilobytes
@@ -273,24 +286,23 @@ _compat_write_wrapper() {
     printf '%s\n' "#!$bash_bin"
     printf '%s\n' "$COMPAT_WRAPPER_MARKER"
     printf '%s\n' "$COMPAT_WRAPPER_TIER_MARKER $tier"
+    # login(1) exports LD_PRELOAD=$PREFIX/lib/libtermux-exec-ld-preload.so,
+    # a bionic object. glibc's ld.so cannot load it and dies with
+    # "libc.so: invalid ELF header" on every start. The glibc termux-exec
+    # shim is equally unusable: every bionic child this tool spawns then
+    # fails with "library libc.so.6 not found". So no preload survives.
+    printf '%s\n' "unset LD_PRELOAD"
     case "$tier" in
     "$COMPAT_TIER_USERLAND")
-      # The $root/$PATH/$LD_PRELOAD below must reach the wrapper verbatim.
+      # The $root/$PATH below must reach the wrapper verbatim.
       # shellcheck disable=SC2016
       printf '%s\n' "# Tier 3: the glibc loader plus the glibc userland, so the child"
-      printf '%s\n' "# processes this tool spawns find the same coreutils and exec shim."
+      printf '%s\n' "# processes this tool spawns find the same coreutils."
       # Everything below is emitted literally and expanded by the wrapper at
       # runtime, where "root" is the assignment written on the previous line.
       printf 'root=%q\n' "$(compat_glibc_root)"
       # shellcheck disable=SC2016  # expands in the wrapper
       printf 'export PATH="$root/bin:$PATH"\n'
-      # The glibc termux-exec shim is optional; a preload pointing nowhere
-      # makes ld.so complain on every start of the tool.
-      # shellcheck disable=SC2016  # expands in the wrapper
-      printf 'if [ -f "$root/lib/libtermux-exec.so" ]; then\n'
-      # shellcheck disable=SC2016  # expands in the wrapper
-      printf '  export LD_PRELOAD="$root/lib/libtermux-exec.so${LD_PRELOAD:+:$LD_PRELOAD}"\n'
-      printf 'fi\n' 
       printf 'exec %q --library-path %q %q "$@"\n' "$loader" "$libpath" "$real"
       ;;
     "$COMPAT_TIER_PROOT")
@@ -328,22 +340,43 @@ compat_wrap() {
   [[ -f "$real" ]] || return 1
   if _compat_is_wrapper "$real"; then
     current="$(compat_wrapper_tier "$real")"
-    [[ "$current" == "$tier" ]] && return 0
-    # Re-tier an existing wrapper: the original is already parked next to it,
-    # so only the launcher changes.
+    if [[ "$current" == "$tier" ]] && compat_wrapper_is_current "$real"; then
+      return 0
+    fi
+    # Re-tier an existing wrapper, or refresh one written by an older karnel:
+    # the original is already parked next to it, so only the launcher changes.
     stored="$real.karnel-real"
     [[ -e "$stored" ]] || return 1
     loader="$(compat_glibc_loader)" || loader="/lib/ld-linux-aarch64.so.1"
     _compat_write_wrapper "$real" "$stored" "$loader" "$tier" || return 1
-    log_info "compat: $real retiered to level $tier"
+    if [[ "$current" == "$tier" ]]; then
+      log_info "compat: $real wrapper refreshed"
+    else
+      log_info "compat: $real retiered to level $tier"
+    fi
     return 0
   fi
   compat_is_glibc_elf "$real" || return 1
   loader="$(compat_glibc_loader)" || return 1
   stored="$real.karnel-real"
   if [[ -e "$stored" ]]; then
-    log_error "compat: refusing to overwrite existing $stored"
-    return 1
+    # The file on disk is a real ELF, not our wrapper, while a parked copy is
+    # already sitting beside it: something outside karnel replaced the
+    # launcher (freebuff's node entry re-extracts its runtime in place) and
+    # orphaned the copy. The file on disk is authoritative now, so the parked
+    # copy is stale. A refusal here would leave the tool permanently
+    # unrunnable, so the copy is dropped when it is the same bytes and kept
+    # as .karnel-real.stale otherwise - a 130 MB runtime must not be copied
+    # just to prove a point.
+    if cmp -s -- "$stored" "$real" 2>/dev/null; then
+      rm -f -- "$stored" || return 1
+      log_warn "compat: dropped a stale parked copy for $real"
+    elif ! mv -f -- "$stored" "$stored.stale" 2>/dev/null; then
+      log_error "compat: could not move the stale parked copy for $real"
+      return 1
+    else
+      log_warn "compat: replaced a stale parked copy for $real"
+    fi
   fi
   if ! mv -- "$real" "$stored"; then
     log_error "compat: could not move $real aside"
@@ -391,6 +424,11 @@ compat_escalate() {
   local target="$1" real tier="$COMPAT_TIER_LOADER"
   real="$(readlink -f -- "$target" 2>/dev/null || printf '%s' "$target")"
   _compat_is_wrapper "$real" || return 0
+
+  # Refresh a launcher written by an older karnel before probing it: the probe
+  # has to exercise the wrapper we are about to ship, not the stale one.
+  compat_wrapper_is_current "$real" ||
+    compat_wrap "$real" "$(compat_wrapper_tier "$real")" || true
 
   compat_probe "$real" && return 0
 

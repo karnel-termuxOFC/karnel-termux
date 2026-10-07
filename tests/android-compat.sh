@@ -6,6 +6,9 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 SYSTEM_HEAD=$(command -v head)
+# The host's real prefix. setup_compat_env swaps PREFIX for a sandbox, and the
+# preload test needs a library the running linker actually accepts.
+HOST_PREFIX="${PREFIX:-}"
 
 pass=0
 failed=0
@@ -47,6 +50,15 @@ setup_compat_env() {
   {
     printf '%s\n' "#!$bash_bin"
     printf '%s\n' "# fake glibc loader: --library-path <path> <binary> [args...]"
+    printf '%s\n' "# Refuse any preload: a wrapper that lets one through is a wrapper that"
+    printf '%s\n' "# dies on a real Termux host, where login(1) exports the bionic shim."
+    # shellcheck disable=SC2016  # emitted verbatim, expanded by the loader
+    printf '%s\n' 'if [[ -n "${LD_PRELOAD:-}" ]]; then'
+    # shellcheck disable=SC2016  # emitted verbatim, expanded by the loader
+    printf '%s\n' '  printf "leaked LD_PRELOAD: %s\n" "$LD_PRELOAD" >&2'
+    # shellcheck disable=SC2016  # emitted verbatim, expanded by the loader
+    printf '%s\n' '  exit 127'
+    printf '%s\n' 'fi'
     # shellcheck disable=SC2016  # \$1 must expand when the fake loader runs
     printf '%s\n' '[[ "${1:-}" == "--library-path" ]] && shift 2'
     printf '%s\n' 'exec "$@"'
@@ -457,10 +469,119 @@ assert_adapt_installed_never_probes_native_tools() (
   [[ "$(compat_wrapper_tier "$glibc_tool")" == "$COMPAT_TIER_LOADER" ]]
 )
 
+# login(1) exports LD_PRELOAD=$PREFIX/lib/libtermux-exec-ld-preload.so. A
+# bionic bash loads that happily, but the glibc loader cannot, and answers
+# with "error while loading shared libraries: .../libc.so: invalid ELF
+# header" - which is what made freebuff fail its runtime probe during
+# install. Tier 3 must not answer by preloading the glibc shim instead:
+# every bionic child it spawns then fails with "library libc.so.6 not found".
+assert_wrapper_never_hands_a_preload_to_the_loader() (
+  setup_compat_env
+  local tool="$PREFIX/bin/preload.glibc-fake-elf" out tier preload="" cand
+  make_glibc_tool "$tool"
+
+  # Pick a preload the running linker accepts, so the assertion exercises the
+  # wrapper instead of dying in bash before it is ever reached. Android's
+  # linker treats a missing object as fatal, glibc only warns.
+  for cand in "$HOST_PREFIX/lib/libtermux-exec-ld-preload.so" "/nonexistent-karnel-preload.so"; do
+    [[ -n "$cand" ]] || continue
+    if LD_PRELOAD="$cand" bash -c 'exit 0' 2>/dev/null; then
+      preload="$cand"
+      break
+    fi
+  done
+  if [[ -z "$preload" ]]; then
+    printf '%s\n' "no preload this host will tolerate" >&2
+    return 1
+  fi
+
+  for tier in "$COMPAT_TIER_LOADER" "$COMPAT_TIER_USERLAND"; do
+    compat_wrap "$tool" "$tier"
+    out="$(LD_PRELOAD="$preload" "$tool" one two)"
+    if [[ "$out" != "ran:one two" ]]; then
+      printf 'tier %s handed the preload to the loader: %s\n' "$tier" "$out" >&2
+      return 1
+    fi
+    if ! grep -qF 'unset LD_PRELOAD' "$tool"; then
+      printf 'tier %s does not clear the preload\n' "$tier" >&2
+      return 1
+    fi
+    if grep -qF 'export LD_PRELOAD' "$tool"; then
+      printf 'tier %s exports a preload of its own\n' "$tier" >&2
+      return 1
+    fi
+  done
+)
+
+# Installs made by an older karnel still carry a launcher without the preload
+# guard. Adapting must rewrite that launcher in place and leave the parked
+# original alone, or every already-wrapped tool stays broken forever.
+assert_stale_wrapper_is_refreshed() (
+  setup_compat_env
+  local tool="$PREFIX/bin/stale.glibc-fake-elf"
+  make_glibc_tool "$tool"
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  sed -i '/unset LD_PRELOAD/d' -- "$tool"
+  if compat_wrapper_is_current "$tool"; then
+    printf '%s\n' "the stripped launcher still claims to be current" >&2
+    return 1
+  fi
+
+  compat_adapt_installed "stale.glibc-fake-elf"
+  compat_wrapper_is_current "$tool" || {
+    printf '%s\n' "a stale launcher was not refreshed" >&2
+    return 1
+  }
+  [[ "$(compat_wrapper_tier "$tool")" == "$COMPAT_TIER_LOADER" ]]
+  [[ -f "$tool.karnel-real" ]]
+  [[ "$("$tool" one)" == "ran:one" ]]
+)
+
+# freebuff's node entry re-extracts its runtime in place, which drops a fresh
+# ELF over the wrapper and orphans the parked copy. Adaptation must recover
+# from that; refusing leaves the tool permanently unrunnable, because every
+# later install hits the same refusal.
+assert_orphaned_parked_copy_is_replaced() (
+  setup_compat_env
+  local tool="$PREFIX/bin/orphan.glibc-fake-elf" old
+  make_glibc_tool "$tool"
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  [[ -f "$tool.karnel-real" ]] || return 1
+
+  # Re-extracted identical bytes: the parked copy is redundant, and a 130 MB
+  # runtime must not be duplicated just to keep it.
+  make_glibc_tool "$tool"
+  compat_adapt "$tool"
+  compat_wrapper_is_current "$tool" || {
+    printf '%s\n' "an identical orphan blocked adaptation" >&2
+    return 1
+  }
+  [[ -f "$tool.karnel-real" && ! -e "$tool.karnel-real.stale" ]]
+  [[ "$("$tool" one)" == "ran:one" ]]
+
+  # A genuinely different orphan is worth keeping beside the new copy.
+  compat_unwrap "$tool"
+  printf '%s\n' '# a runtime karnel never saw' >>"$tool"
+  old="$(cksum <"$tool")"
+  compat_wrap "$tool" "$COMPAT_TIER_LOADER"
+  make_glibc_tool "$tool"
+  compat_adapt "$tool"
+  compat_wrapper_is_current "$tool" || {
+    printf '%s\n' "a different orphan blocked adaptation" >&2
+    return 1
+  }
+  [[ -f "$tool.karnel-real.stale" ]]
+  [[ "$(cksum <"$tool.karnel-real.stale")" == "$old" ]]
+  [[ "$("$tool" one)" == "ran:one" ]]
+)
+
 run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
 run_test "adapt_installed climbs the ladder on the installer path" assert_adapt_installed_climbs_the_ladder
 run_test "an existing wrapper is re-evaluated on the next install" assert_existing_wrapper_is_reevaluated
 run_test "adapt_installed never probes native, script or text entries" assert_adapt_installed_never_probes_native_tools
+run_test "no wrapper hands a preload to the glibc loader" assert_wrapper_never_hands_a_preload_to_the_loader
+run_test "a launcher from an older karnel is refreshed in place" assert_stale_wrapper_is_refreshed
+run_test "an orphaned parked copy does not block adaptation" assert_orphaned_parked_copy_is_replaced
 run_test "adaptation falls back to the loader when no tier helps" assert_falls_back_to_the_loader_when_no_tier_helps
 run_test "re-tiering keeps the parked original byte-identical" assert_retiering_keeps_the_parked_original
 run_test "the synthetic proot root is built once and reused" assert_proot_root_is_built_once
