@@ -191,8 +191,9 @@ assert_fix_shebang_rewrites_env_interpreter() (
   local bash_bin target
   bash_bin="$(command -v bash)"
   target="$TEST_ROOT/tool-entry"
-  # Android has no /usr/bin/env, so this shebang cannot run here.
-  printf '%s\n' '#!/usr/bin/env bash' 'echo hi' >"$target"
+  # A shebang whose env path does not exist cannot run on any host - the
+  # test must not depend on the runner happening to have no /usr/bin/env.
+  printf '%s\n' '#!/nonexistent/env bash' 'echo hi' >"$target"
   chmod +x "$target"
 
   compat_fix_shebang "$target"
@@ -209,7 +210,7 @@ assert_fix_shebang_keeps_interpreter_arguments() (
   local bash_bin target
   bash_bin="$(command -v bash)"
   target="$TEST_ROOT/tool-entry-args"
-  printf '%s\n' '#!/usr/bin/env bash -e' 'echo hi' >"$target"
+  printf '%s\n' '#!/nonexistent/env bash -e' 'echo hi' >"$target"
   chmod +x "$target"
 
   compat_fix_shebang "$target"
@@ -232,8 +233,8 @@ assert_fix_shebangs_counts_only_changes() (
   setup_compat_env
   local dir="$TEST_ROOT/shebangs-${BASHPID:-$$}"
   mkdir -p "$dir"
-  printf '%s\n' '#!/usr/bin/env bash' 'echo a' >"$dir/a.sh"
-  printf '%s\n' '#!/usr/bin/env bash' 'echo b' >"$dir/b.sh"
+  printf '%s\n' '#!/nonexistent/env bash' 'echo a' >"$dir/a.sh"
+  printf '%s\n' '#!/nonexistent/env bash' 'echo b' >"$dir/b.sh"
   printf '%s\n' 'not a script' >"$dir/c.txt"
   chmod +x "$dir/a.sh" "$dir/b.sh"
 
@@ -281,7 +282,7 @@ assert_fix_shebang_edits_the_target_of_a_symlink() (
   setup_compat_env
   local dir="$PREFIX/pkg/bin" link
   mkdir -p "$dir"
-  printf '%s\n' '#!/usr/bin/env bash' 'printf "ran-ok\n"' >"$dir/tool.js"
+  printf '%s\n' '#!/nonexistent/env bash' 'printf "ran-ok\n"' >"$dir/tool.js"
   chmod +x "$dir/tool.js"
   link="$PREFIX/bin/tool"
   ln -s "../pkg/bin/tool.js" "$link"
@@ -723,7 +724,7 @@ run_test "wrap runs the binary through the loader and unwraps cleanly" assert_wr
 run_test "wrap is idempotent and never stacks wrappers" assert_wrap_is_idempotent
 run_test "adapt only rewrites glibc binaries on PATH" assert_adapt_only_touches_glibc
 run_test "describe names a wrapped binary" assert_describe_names_a_wrapper
-run_test "fix_shebang rewrites an unrunnable /usr/bin/env interpreter" assert_fix_shebang_rewrites_env_interpreter
+run_test "fix_shebang rewrites an unrunnable env interpreter" assert_fix_shebang_rewrites_env_interpreter
 run_test "fix_shebang keeps interpreter arguments" assert_fix_shebang_keeps_interpreter_arguments
 run_test "fix_shebang leaves unknown interpreters alone" assert_fix_shebang_gives_up_on_unknown_interpreters
 run_test "fix_shebangs counts changed files, not inspected ones" assert_fix_shebangs_counts_only_changes
