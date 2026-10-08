@@ -211,6 +211,43 @@ assert_qoder_proot_preserves_unowned_wrapper() (
   [[ "$(<"$PREFIX/bin/qodercli")" == 'external wrapper' ]]
 )
 
+# npm recreates its shim on every global operation and that shim is dead on
+# Android, so "already installed" must still prove the entry starts - a
+# swallowed entry failure reported success for a command nobody could run.
+assert_freebuff_fails_when_the_entry_is_dead() (
+  mkdir -p "$TEST_ROOT/fb-dead/bin"
+  printf '#!%s\nexit 1\n' "$(command -v bash)" >"$TEST_ROOT/fb-dead/bin/freebuff"
+  chmod +x "$TEST_ROOT/fb-dead/bin/freebuff"
+  export PATH="$TEST_ROOT/fb-dead/bin:$PATH"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  log_success() { :; }
+  source "$ROOT_DIR/karnel/tools/ai/freebuff/install.sh"
+  _fix_freebuff_runtime() { :; }
+  _install_freebuff_entry() { :; }
+  local rc=0
+  install_freebuff || rc=$?
+  [[ $rc -eq 1 ]] || return 1
+)
+
+assert_freebuff_accepts_a_live_entry() (
+  mkdir -p "$TEST_ROOT/fb-live/bin"
+  printf '#!%s\nexit 0\n' "$(command -v bash)" >"$TEST_ROOT/fb-live/bin/freebuff"
+  chmod +x "$TEST_ROOT/fb-live/bin/freebuff"
+  export PATH="$TEST_ROOT/fb-live/bin:$PATH"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  log_success() { :; }
+  source "$ROOT_DIR/karnel/tools/ai/freebuff/install.sh"
+  _fix_freebuff_runtime() { :; }
+  _install_freebuff_entry() { :; }
+  local rc=0
+  install_freebuff || rc=$?
+  [[ $rc -eq 2 ]] || return 1
+)
+
 assert_source_contracts() {
   local tool file
   for tool in claude-code kimchi-code qoder codebuff mimocode goose codegraph; do
@@ -238,4 +275,6 @@ assert_native_activation_restores_existing_data
 assert_native_preflight_preserves_existing_install
 assert_qoder_proot_preserves_unowned_wrapper
 assert_source_contracts
-printf 'AI installer hardening contracts: 9 passed\n'
+assert_freebuff_fails_when_the_entry_is_dead
+assert_freebuff_accepts_a_live_entry
+printf 'AI installer hardening contracts: 11 passed\n'

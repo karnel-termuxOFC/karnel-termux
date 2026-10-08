@@ -23,6 +23,7 @@ install_freebuff() {
     log_info "Freebuff is already installed"
     _fix_freebuff_runtime || true
     _install_freebuff_entry || true
+    _verify_freebuff_entry || return 1
     return 2
   fi
 
@@ -42,6 +43,7 @@ install_freebuff() {
   _fix_freebuff_shebang || return 1
   _fix_freebuff_runtime || return 1
   _install_freebuff_entry || return 1
+  _verify_freebuff_entry || return 1
   log_success "Freebuff installed"
 }
 
@@ -94,6 +96,25 @@ _freebuff_binary_runs() {
   # would still leak the crash of a damaged runtime into the install output.
   { timeout 30 "$bin" --version >/dev/null 2>&1; rc=$?; } 2>/dev/null
   ((rc == 0))
+}
+
+# npm recreates its shim at $PREFIX/bin/freebuff on every global operation, and
+# that shim cannot start on Android - so an install can look successful while
+# the command itself is dead. Every path therefore proves the entry runs before
+# reporting success, the same way _fix_freebuff_runtime proves the runtime does.
+_verify_freebuff_entry() {
+  local entry rc=0
+  entry="$(command -v freebuff 2>/dev/null)"
+  if [[ -z "$entry" || ! -e "$entry" ]]; then
+    log_error "Freebuff is not on PATH after install"
+    return 1
+  fi
+  { timeout 30 "$entry" --version >/dev/null 2>&1; rc=$?; } 2>/dev/null
+  if ((rc != 0)); then
+    log_error "Freebuff does not run after install (exit $rc)"
+    return 1
+  fi
+  return 0
 }
 
 _freebuff_target_key() {
