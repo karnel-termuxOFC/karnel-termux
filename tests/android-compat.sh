@@ -45,7 +45,10 @@ setup_compat_env() {
   export PREFIX="$TEST_ROOT/prefix-$suffix"
   export KARNEL_GLIBC_ROOT="$TEST_ROOT/sysroot-$suffix"
   export PATH="$PREFIX/bin:$PATH"
-  mkdir -p "$PREFIX/bin" "$KARNEL_GLIBC_ROOT/lib"
+  # The snapshot helpers mktemp into TMPDIR; keep that inside the sandbox so a
+  # test can never leave a snapshot behind in the system temp directory.
+  export TMPDIR="$TEST_ROOT/tmp-$suffix"
+  mkdir -p "$PREFIX/bin" "$KARNEL_GLIBC_ROOT/lib" "$TMPDIR"
 
   {
     printf '%s\n' "#!$bash_bin"
@@ -575,6 +578,128 @@ assert_orphaned_parked_copy_is_replaced() (
   [[ "$("$tool" one)" == "ran:one" ]]
 )
 
+# The dispatcher brackets every installing command with a PATH snapshot, so a
+# binary that appears during the command is adapted even though the installer
+# itself never mentions the compatibility layer.
+assert_snapshot_adapts_a_new_binary() (
+  setup_compat_env
+  local snap
+  snap="$(compat_path_snapshot)" || return 1
+  make_glibc_tool "$PREFIX/bin/fresh.glibc-fake-elf"
+
+  compat_adapt_since "$snap"
+  compat_wrapper_is_current "$PREFIX/bin/fresh.glibc-fake-elf" || {
+    printf '%s\n' "a binary created during the command was not adapted" >&2
+    return 1
+  }
+  [[ ! -e "$snap" ]]
+  [[ "$("$PREFIX/bin/fresh.glibc-fake-elf" one)" == "ran:one" ]]
+)
+
+# An installer that replaces a file in place keeps the path but changes the
+# size and mtime, which the snapshot records as a new line.
+assert_snapshot_adapts_a_rewritten_binary() (
+  setup_compat_env
+  local tool="$PREFIX/bin/rewrite.glibc-fake-elf" snap
+  make_glibc_tool "$tool"
+  snap="$(compat_path_snapshot)" || return 1
+  printf '%s\n' "#!$(command -v bash)" 'printf "ran2:%s\n" "$*"' >"$tool"
+  chmod +x "$tool"
+
+  compat_adapt_since "$snap"
+  compat_wrapper_is_current "$tool" || {
+    printf '%s\n' "a rewritten binary was not adapted" >&2
+    return 1
+  }
+  [[ "$("$tool" one)" == "ran2:one" ]]
+)
+
+# Efficiency: files the command did not touch are never looked at, and a
+# native binary or a script that did appear is not wrapped either.
+assert_snapshot_touches_only_what_changed() (
+  setup_compat_env
+  local tool="$PREFIX/bin/keep.glibc-fake-elf" snap
+  make_glibc_tool "$tool"
+  snap="$(compat_path_snapshot)" || return 1
+  make_glibc_tool "$PREFIX/bin/native.native-fake-elf"
+  printf '%s\n' '#!/bin/sh' 'echo hi' >"$PREFIX/bin/fresh.sh"
+  chmod +x "$PREFIX/bin/fresh.sh"
+
+  compat_adapt_since "$snap"
+  [[ ! -e "$tool.karnel-real" ]] || {
+    printf '%s\n' "an untouched binary was wrapped" >&2
+    return 1
+  }
+  [[ ! -e "$PREFIX/bin/native.native-fake-elf.karnel-real" ]]
+  [[ ! -e "$PREFIX/bin/fresh.sh.karnel-real" ]]
+)
+
+# Adaptation runs after the command's own exit code is known, so it must never
+# be able to change that code: a missing snapshot, or a directory that
+# disappeared while the command ran, still returns 0.
+assert_adapt_since_never_fails_a_command() (
+  setup_compat_env
+  local snap
+  compat_adapt_since "$TEST_ROOT/does-not-exist" || return 1
+  snap="$(compat_path_snapshot)" || return 1
+  rm -rf -- "${PREFIX:?}/bin"
+  compat_adapt_since "$snap" || return 1
+  return 0
+)
+
+# Guards the wiring itself: if a future edit stops bracketing commands, or
+# drops the import that makes the helpers exist, these fail.
+assert_the_dispatcher_brackets_installing_commands() {
+  local file="$ROOT_DIR/karnel/cli/karnel.sh" list cmd
+  grep -q 'import "@/utils/compat"' "$file" || {
+    printf '%s\n' "karnel.sh does not import the compatibility layer" >&2
+    return 1
+  }
+  grep -q 'compat_path_snapshot' "$file" || {
+    printf '%s\n' "the dispatcher no longer snapshots PATH" >&2
+    return 1
+  }
+  grep -q 'compat_adapt_since' "$file" || {
+    printf '%s\n' "the dispatcher no longer adapts what changed" >&2
+    return 1
+  }
+  list="$(grep -E '^\s*install \| update \| upgrade \| reinstall \|' "$file" | head -1)"
+  [[ -n "$list" ]] || {
+    printf '%s\n' "no bracket list found in the dispatcher" >&2
+    return 1
+  }
+  for cmd in install update upgrade reinstall restore plugin supabase deploy voice robin; do
+    [[ " $list " == *" $cmd "* ]] || {
+      printf '%s\n' "$cmd is not bracketed by a PATH snapshot" >&2
+      return 1
+    }
+  done
+
+  # The AI reinstall fallback installs through _install_fn and returns without
+  # passing through _run_ai_tool_action, so it has to adapt itself.
+  local ai="$ROOT_DIR/karnel/tools/ai/all.sh"
+  # shellcheck disable=SC2016  # the literal $id is what we are looking for
+  grep -q '_ai_tool_compat_adapt "\$id"' "$ai" || {
+    printf '%s\n' "the AI reinstall fallback does not adapt what it installed" >&2
+    return 1
+  }
+  local after_fallback
+  # shellcheck disable=SC2016  # matches the literal call, not its expansion
+  after_fallback="$(grep -n '"$install_fn"' "$ai" | tail -1 | cut -d: -f1)"
+  [[ -n "$after_fallback" ]] || {
+    printf '%s\n' "the AI reinstall fallback no longer calls \$install_fn" >&2
+    return 1
+  }
+  awk -v start="$after_fallback" '
+    NR > start && /_ai_tool_compat_adapt "\$id"/ { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$ai" || {
+    printf '%s\n' "the AI fallback installs without adapting afterwards" >&2
+    return 1
+  }
+  return 0
+}
+
 run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
 run_test "adapt_installed climbs the ladder on the installer path" assert_adapt_installed_climbs_the_ladder
 run_test "an existing wrapper is re-evaluated on the next install" assert_existing_wrapper_is_reevaluated
@@ -582,6 +707,11 @@ run_test "adapt_installed never probes native, script or text entries" assert_ad
 run_test "no wrapper hands a preload to the glibc loader" assert_wrapper_never_hands_a_preload_to_the_loader
 run_test "a launcher from an older karnel is refreshed in place" assert_stale_wrapper_is_refreshed
 run_test "an orphaned parked copy does not block adaptation" assert_orphaned_parked_copy_is_replaced
+run_test "a binary created during a command is adapted afterwards" assert_snapshot_adapts_a_new_binary
+run_test "a binary rewritten in place is adapted afterwards" assert_snapshot_adapts_a_rewritten_binary
+run_test "only the entries a command actually changed are adapted" assert_snapshot_touches_only_what_changed
+run_test "adaptation can never change a command's exit code" assert_adapt_since_never_fails_a_command
+run_test "the dispatcher brackets every installing command" assert_the_dispatcher_brackets_installing_commands
 run_test "adaptation falls back to the loader when no tier helps" assert_falls_back_to_the_loader_when_no_tier_helps
 run_test "re-tiering keeps the parked original byte-identical" assert_retiering_keeps_the_parked_original
 run_test "the synthetic proot root is built once and reused" assert_proot_root_is_built_once

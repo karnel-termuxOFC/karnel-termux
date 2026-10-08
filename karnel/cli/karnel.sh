@@ -2,6 +2,7 @@
 
 import "@/utils/log"
 import "@/utils/colors"
+import "@/utils/compat"
 
 : "${KARNEL_VERSION:=unknown}"
 
@@ -67,8 +68,23 @@ _karnel_dispatch() {
 
   if [[ -f "$command_file" ]]; then
     import "@/cli/commands/$cmd"
+    # Every command that can put a binary on PATH is bracketed by a snapshot
+    # of PATH, and whatever changed inside it is adapted afterwards. That is
+    # what makes the layer cover *all* tools: an installer that never calls
+    # compat itself, one that names a command its registry does not mention,
+    # and one that restores a file from an archive all end up here anyway.
+    local compat_snap=""
+    case "$cmd" in
+    install | update | upgrade | reinstall | restore | plugin | supabase | deploy | voice | robin | pg | open | init)
+      compat_snap="$(compat_path_snapshot 2>/dev/null)" || compat_snap=""
+      ;;
+    esac
     "${cmd}_main" "$@"
-    return $?
+    local cmd_rc=$?
+    if [[ -n "$compat_snap" ]]; then
+      compat_adapt_since "$compat_snap" || true
+    fi
+    return "$cmd_rc"
   fi
 
   import "@/tools/plugins/install"

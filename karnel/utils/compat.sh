@@ -534,13 +534,11 @@ compat_fix_shebangs() {
   printf '%s\n' "$fixed"
 }
 
-# Adapts whatever a tool has just put on PATH. Wraps a glibc ELF so the
-# kernel can start it; leaves native binaries, scripts and text files alone.
-# Always returns 0: adaptation is an optimisation, never a reason to fail an
-# install or an update.
-compat_adapt_installed() {
-  local tool="$1" path real
-  path="$(command -v -- "$tool" 2>/dev/null)" || return 0
+# Adapts one resolved path. Wraps a glibc ELF so the kernel can start it;
+# leaves native binaries, scripts and text files alone. Always returns 0:
+# adaptation is an optimisation, never a reason to fail an install.
+_compat_adapt_path() {
+  local path="$1" real
   [[ -n "$path" ]] || return 0
   real="$(readlink -f -- "$path" 2>/dev/null || printf '%s' "$path")"
   [[ -f "$real" && -x "$real" ]] || return 0
@@ -557,6 +555,57 @@ compat_adapt_installed() {
     compat_wrap "$real" || true
     compat_escalate "$real" || true
   fi
+  return 0
+}
+
+# Adapts whatever a tool has just put on PATH.
+compat_adapt_installed() {
+  local tool="$1" path
+  path="$(command -v -- "$tool" 2>/dev/null)" || return 0
+  [[ -n "$path" ]] || return 0
+  _compat_adapt_path "$path"
+}
+
+# Records every direct entry of the writable parts of PATH as
+# "path|size|mtime", printed to a temporary file. Taken before a command runs
+# so the layer can afterwards adapt exactly what that command touched.
+#
+# Sweeping the whole prefix instead would need readelf on every ELF, which
+# measures 60+ seconds over a Termux bin directory of 800 entries; diffing a
+# snapshot adapts only the handful of files that actually changed. It also
+# means no installer has to declare its binary names: a tool that installs a
+# command its registry does not mention is still covered, and a file restored
+# from an archive with its original mtime is caught by being a new path.
+compat_path_snapshot() {
+  local dir tmp
+  tmp="$(mktemp "${TMPDIR:-${KARNEL_CACHE:-/tmp}}/karnel-compat-snap.XXXXXX" 2>/dev/null)" || return 1
+  local IFS=':'
+  for dir in $PATH; do
+    [[ -n "$dir" && -d "$dir" && -w "$dir" ]] || continue
+    find "$dir" -maxdepth 1 \( -type f -o -type l \) -printf '%p|%s|%T@\n' 2>/dev/null || true
+  done | sort >"$tmp" || true
+  printf '%s\n' "$tmp"
+}
+
+# Adapts every PATH entry that appeared or changed since a snapshot, then
+# removes both files. Returns 0 unconditionally.
+compat_adapt_since() {
+  local snap="$1" tmp dir path
+  [[ -f "$snap" ]] || return 0
+  tmp="$(mktemp "${TMPDIR:-${KARNEL_CACHE:-/tmp}}/karnel-compat-now.XXXXXX" 2>/dev/null)" || {
+    rm -f -- "$snap"
+    return 0
+  }
+  local IFS=':'
+  for dir in $PATH; do
+    [[ -n "$dir" && -d "$dir" && -w "$dir" ]] || continue
+    find "$dir" -maxdepth 1 \( -type f -o -type l \) -printf '%p|%s|%T@\n' 2>/dev/null || true
+  done | sort >"$tmp" || true
+  while IFS= read -r path; do
+    [[ -n "$path" ]] || continue
+    _compat_adapt_path "$path" || true
+  done < <(comm -13 -- "$snap" "$tmp" 2>/dev/null | cut -d'|' -f1)
+  rm -f -- "$snap" "$tmp"
   return 0
 }
 

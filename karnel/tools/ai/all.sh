@@ -230,6 +230,13 @@ _run_ai_tool_action() {
     return "$uninstall_rc"
   fi
   "$install_fn"
+  local install_rc=$?
+  # The fallback path never passes through _run_ai_tool_action's adapt call,
+  # so the binaries this install just wrote would stay unwrapped.
+  if ((install_rc == 0)); then
+    _ai_tool_compat_adapt "$id"
+  fi
+  return "$install_rc"
 }
 
 _all_ai_tools_action() {
