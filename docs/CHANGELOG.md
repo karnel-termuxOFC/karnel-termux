@@ -6,6 +6,12 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.4
+
+- **Freebuff repairs itself after it updates itself.** The tool re-downloads its own runtime on every update and drops the raw glibc ELF over the adapted copy, so the device went from a working `0.2.22` to a dead `0.2.26` (`spawn …/manicode/freebuff ENOENT`) with nothing to repair it until the next install. The karnel-owned entry now sources the compatibility layer and re-adapts the runtime before handing off to the launcher; a working copy is recognised before any ELF is inspected, so the cost is a few milliseconds per start.
+- **Proof on the device.** Copying the parked original over the wrapper — precisely what the self-update does — left `freebuff` unrunnable; the next start with the new entry re-wrapped it and printed `0.2.26` with exit 0. The install-time verification introduced in 4.18.3 reported the broken state as a failure (`Freebuff does not run after install`) instead of the "already installed" success it used to print.
+- **Tests.** One new case in `tests/ai-installer-hardening.sh` asserts the entry re-adapts its runtime; the suite is now 12 cases. Removing the re-adapt line fails it.
+
 ## 4.18.3
 
 - **Every command that installs something now adapts what it put on PATH.** The dispatcher brackets `install`, `update`, `upgrade`, `reinstall`, `restore`, `plugin`, `supabase`, `deploy`, `voice`, `robin`, `pg`, `open` and `init` with a snapshot of the writable parts of PATH (`path|size|mtime` per entry) and afterwards adapts exactly the entries that appeared or changed. That closes the gap the registries could never close: an installer that never calls the compatibility layer, one that names a command its registry does not mention, and a file restored from an archive with its original timestamp all end up wrapped anyway. Sweeping the prefix instead was measured on this device at 51 seconds of `readelf` over 800 entries (and 875 seconds with `readelf -l`); diffing a snapshot takes 60 ms and touches nothing the command did not write. The exit code of the command is taken before adaptation and returned unchanged.
