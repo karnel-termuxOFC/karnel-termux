@@ -240,7 +240,7 @@ _replace_freebuff_binary() {
 # so the entry is replaced by a wrapper that exports the supported key; no
 # launcher code is patched and the real entry point keeps working.
 _install_freebuff_entry() {
-  local entry="$PREFIX/bin/freebuff" key real tmp
+  local entry="$PREFIX/bin/freebuff" key real tmp compat
   key="$(_freebuff_target_key)" || {
     log_error "Freebuff has no runtime for $(uname -m)"
     return 1
@@ -256,6 +256,8 @@ _install_freebuff_entry() {
     log_error "The freebuff launcher was not found"
     return 1
   fi
+  compat="$(readlink -f -- "${KARNEL_PATH:-}/utils/compat.sh" 2>/dev/null || true)"
+  [[ -f "$compat" ]] || compat=""
   tmp="$entry.tmp.$$"
   {
     printf '%s\n' "#!$PREFIX/bin/bash"
@@ -265,6 +267,13 @@ _install_freebuff_entry() {
     printf '%s\n' "# resolves its release target to android-arm64 and no build is published"
     printf '%s\n' "# for it. The launcher honours this override, so no code is patched."
     printf 'export FREEBUFF_BINARY_TARGET=%q\n' "$key"
+    if [[ -n "$compat" ]]; then
+      printf '%s\n' "# Freebuff re-downloads its own runtime on every update and drops the raw"
+      printf '%s\n' "# glibc ELF over the adapted copy, so the runtime is re-adapted on each start"
+      printf '%s\n' "# - the probe returns before an ELF is inspected when it is already a wrapper."
+      printf 'source %q >/dev/null 2>&1 || true\n' "$compat"
+      printf 'compat_adapt %q >/dev/null 2>&1 || true\n' "$FREEBUFF_DATA_DIR/freebuff"
+    fi
     printf 'exec %q %q "$@"\n' "$PREFIX/bin/node" "$real"
   } >"$tmp" || {
     rm -f -- "$tmp"

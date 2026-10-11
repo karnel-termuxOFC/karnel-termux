@@ -248,6 +248,35 @@ assert_freebuff_accepts_a_live_entry() (
   [[ $rc -eq 2 ]] || return 1
 )
 
+# Freebuff re-downloads its runtime on every update and drops the raw glibc ELF
+# over the adapted copy, so the entry has to re-adapt before it hands off - the
+# only thing standing between a self-update and a command that no longer starts.
+assert_freebuff_entry_re_adapts_its_runtime() (
+  export HOME="$TEST_ROOT/fb-entry-home"
+  export PREFIX="$TEST_ROOT/fb-entry-prefix"
+  export KARNEL_CACHE="$TEST_ROOT/fb-entry-cache"
+  export KARNEL_PATH="$ROOT_DIR/karnel"
+  mkdir -p "$HOME/.config/manicode" "$PREFIX/bin" "$PREFIX/lib/node_modules/freebuff" "$KARNEL_CACHE"
+  printf 'console.log("stub")\n' >"$PREFIX/lib/node_modules/freebuff/index.js"
+  ln -s ../lib/node_modules/freebuff/index.js "$PREFIX/bin/freebuff"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  log_success() { :; }
+  karnel_npm() { :; }
+  source "$ROOT_DIR/karnel/tools/ai/freebuff/install.sh"
+  _install_freebuff_entry || return 1
+  grep -qF 'compat_adapt' "$PREFIX/bin/freebuff" || {
+    printf '%s\n' "the entry does not re-adapt the runtime before starting it" >&2
+    return 1
+  }
+  grep -qE 'source [^ ]*/utils/compat\.sh' "$PREFIX/bin/freebuff" || {
+    printf '%s\n' "the entry does not source the compatibility layer" >&2
+    return 1
+  }
+  return 0
+)
+
 assert_source_contracts() {
   local tool file
   for tool in claude-code kimchi-code qoder codebuff mimocode goose codegraph; do
@@ -277,4 +306,5 @@ assert_qoder_proot_preserves_unowned_wrapper
 assert_source_contracts
 assert_freebuff_fails_when_the_entry_is_dead
 assert_freebuff_accepts_a_live_entry
-printf 'AI installer hardening contracts: 11 passed\n'
+assert_freebuff_entry_re_adapts_its_runtime
+printf 'AI installer hardening contracts: 12 passed\n'
