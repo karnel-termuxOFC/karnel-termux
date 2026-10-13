@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 import "@/utils/npm"
+import "@/utils/npm-shebang"
 import "@/utils/log"
 import "@/utils/version"
 
@@ -8,7 +9,10 @@ PUTER_PACKAGE="@heyputer/cli"
 PUTER_LOG_FILE="$KARNEL_CACHE/install_ai.log"
 
 install_puter() {
-  if command -v puter &>/dev/null; then
+  # A symlink on PATH is not an installation: the entry npm left behind has the
+  # /usr/bin/env shebang Termux cannot exec, so a broken puter must be repaired
+  # rather than reported as already installed.
+  if command -v puter &>/dev/null && puter --help &>/dev/null; then
     log_info "Puter CLI is already installed"
     return 2
   fi
@@ -25,11 +29,11 @@ install_puter() {
     log_error "Failed to install Puter CLI; see $PUTER_LOG_FILE"
     return 1
   fi
+  _fix_npm_shebang "puter" || return 1
   if ! command -v puter &>/dev/null || ! puter --help &>/dev/null; then
     log_error "Puter CLI did not run after installation; see $PUTER_LOG_FILE"
     return 1
   fi
-  command -v termux-fix-shebang &>/dev/null && termux-fix-shebang "$(command -v puter)" &>/dev/null || true
   log_success "Puter CLI installed"
 }
 
@@ -59,7 +63,7 @@ _do_update_puter() {
     log_error "Failed to update Puter CLI; see $PUTER_LOG_FILE"
     return 1
   fi
-  command -v termux-fix-shebang &>/dev/null && termux-fix-shebang "$(command -v puter)" &>/dev/null || true
+  _fix_npm_shebang "puter" || return 1
   if ! command -v puter &>/dev/null || ! puter --help &>/dev/null; then
     log_error "Puter CLI did not run after update; see $PUTER_LOG_FILE"
     return 1
