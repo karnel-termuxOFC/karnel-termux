@@ -317,6 +317,13 @@ install_droid() {
   fi
   _droid_verify_ownership || return 1
 
+  # The download below creates the data directory before anything marks it as
+  # ours, so a failed run left an unowned tree that every later install refused
+  # to touch and droid could never be installed again. Remember what was
+  # already there and take back only what this run created.
+  local data_preexisting=0
+  [[ -e "$DROID_DATA_DIR" ]] && data_preexisting=1
+
   if command -v droid &>/dev/null; then
     if _droid_wrapper_owned; then
       log_info "Droid is already installed"
@@ -352,6 +359,9 @@ install_droid() {
     return 0
   fi
 
+  if ((data_preexisting == 0)) && [[ -e "$DROID_DATA_DIR" ]] && ! _droid_data_owned; then
+    rm -rf "$DROID_DATA_DIR"
+  fi
   log_error "Droid installation failed"
   return 1
 }
