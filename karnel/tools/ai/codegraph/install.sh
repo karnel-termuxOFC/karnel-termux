@@ -43,7 +43,7 @@ _download_codegraph() {
 }
 
 _download_codegraph_impl() {
-	local staging_dir old_dir
+	local staging_dir old_dir LATEST_VERSION
 	case "$(uname -m)" in
 		aarch64|arm64) ;;
 		*) log_error "CodeGraph Linux ARM64 asset is unavailable for architecture: $(uname -m)"; return 1 ;;

@@ -452,26 +452,38 @@ loading() {
 	local _ktmpdir="${KARNEL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/karnel}"
 	mkdir -p "$_ktmpdir" 2>/dev/null || _ktmpdir="${TMPDIR:-${KARNEL_CACHE:-$HOME/.cache/karnel}}"
 	tmpfile="$(mktemp "$_ktmpdir/karnel.XXXXXX" 2>/dev/null)" || tmpfile="$(mktemp 2>/dev/null)"
-	local cmd_pid=""
+	local spinner_pid=""
 
-	trap 'kill "$cmd_pid" 2>/dev/null; rm -f "$tmpfile"; return 1' INT TERM
+	trap 'kill "$spinner_pid" 2>/dev/null; rm -f "$tmpfile"; return 1' INT TERM
 
 	printf "    ${CYAN}⠋${D_CYAN} %s${NC}" "$message"
 
 	mkdir -p "$KARNEL_CACHE"
 
-	"$@" >"$tmpfile" 2>&1 &
-	cmd_pid=$!
+	# The spinner is the background process, never the command. `"$@" &` puts
+	# the command in a subshell, so anything it assigned came back empty in the
+	# caller and every installer that staged a wrapper through `loading` then
+	# failed on an empty path.
+	(
+		frame_idx=0
+		while :; do
+			printf "\r    ${CYAN}%s${D_CYAN} %s${NC}" "${frames[$frame_idx]}" "$message"
+			frame_idx=$(( (frame_idx + 1) % ${#frames[@]} ))
+			sleep "$delay"
+		done
+	) &
+	spinner_pid=$!
 
-	local frame_idx=0
-	while kill -0 "$cmd_pid" 2>/dev/null; do
-		printf "\r    ${CYAN}%s${D_CYAN} %s${NC}" "${frames[$frame_idx]}" "$message"
-		frame_idx=$(( (frame_idx + 1) % ${#frames[@]} ))
-		sleep "$delay"
-	done
+	# A step that cds used to do so out of sight; keep that isolation so the
+	# caller resumes where it was.
+	local entry_pwd="$PWD"
+	local exit_code=0
+	"$@" >"$tmpfile" 2>&1 || exit_code=$?
+	cd "$entry_pwd" 2>/dev/null || true
 
-	wait "$cmd_pid" 2>/dev/null
-	local exit_code=$?
+	kill "$spinner_pid" 2>/dev/null || true
+	wait "$spinner_pid" 2>/dev/null || true
+	spinner_pid=""
 	trap - INT TERM
 
 	if [[ $exit_code -eq 0 ]]; then
