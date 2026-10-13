@@ -185,6 +185,27 @@ _ai_tool_resolve() {
   return 1
 }
 
+# A failed install can leave behind the data directory it created without ever
+# stamping it as ours, and the ownership guard then refuses every later attempt
+# - the tool becomes impossible to install, which is exactly what happened to
+# droid. Take back what the failed run created and nothing else: a directory
+# that was already there is not ours to remove, and one the installer already
+# marked is a tree a later attempt can reuse.
+_ai_tool_rollback_data() {
+  local id="$1" preexisting="$2"
+  (( preexisting == 0 )) || return 0
+  # The id is registry-validated before it gets here; refuse anything that
+  # could climb out anyway, so the helper stays safe on its own.
+  [[ -n "$id" && "$id" != */* && "$id" != *..* ]] || return 0
+  [[ -n "${KARNEL_DATA:-}" ]] || return 0
+  local dir="${KARNEL_DATA}/${id}"
+  [[ "$dir" == "$KARNEL_DATA/"* && -d "$dir" ]] || return 0
+  if find "$dir" -maxdepth 1 -name "*karnel*" -print -quit 2>/dev/null | grep -q .; then
+    return 0
+  fi
+  rm -rf -- "$dir"
+}
+
 _run_ai_tool_action() {
   local action="$1"
   local id="$2"
@@ -203,10 +224,14 @@ _run_ai_tool_action() {
 
   if [[ "$action" != "reinstall" ]]; then
     declare -f "$func_name" &>/dev/null || return 127
+    local data_preexisting=0
+    [[ -e "${KARNEL_DATA:-}/$id" ]] && data_preexisting=1
     local rc=0
     "$func_name" || rc=$?
     if (( rc == 0 || rc == 2 )) && [[ "$action" == "install" || "$action" == "update" ]]; then
       _ai_tool_compat_adapt "$id"
+    elif (( rc != 0 && rc != 2 )) && [[ "$action" == "install" ]]; then
+      _ai_tool_rollback_data "$id" "$data_preexisting"
     fi
     return "$rc"
   fi
@@ -229,12 +254,16 @@ _run_ai_tool_action() {
   if [[ $uninstall_rc -ne 0 && $uninstall_rc -ne 2 ]]; then
     return "$uninstall_rc"
   fi
+  local data_preexisting=0
+  [[ -e "${KARNEL_DATA:-}/$id" ]] && data_preexisting=1
   "$install_fn"
   local install_rc=$?
   # The fallback path never passes through _run_ai_tool_action's adapt call,
   # so the binaries this install just wrote would stay unwrapped.
   if ((install_rc == 0)); then
     _ai_tool_compat_adapt "$id"
+  elif ((install_rc != 0 && install_rc != 2)); then
+    _ai_tool_rollback_data "$id" "$data_preexisting"
   fi
   return "$install_rc"
 }
