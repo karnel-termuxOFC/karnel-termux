@@ -9,9 +9,9 @@ import "@/utils/version"
 : "${KARNEL_CACHE:=${XDG_CACHE_HOME:-$HOME/.cache}/karnel}"
 LOG_FILE="$KARNEL_CACHE/install_ai.log"
 OMNI_ROUTE_DATA_DIR="$KARNEL_DATA/omni-route"
-OMNI_ROUTE_PKG="$OMNI_ROUTE_DATA_DIR/packages/karnelroute"
+OMNI_ROUTE_PKG="$OMNI_ROUTE_DATA_DIR/packages/omniroute"
 OMNI_ROUTE_MARKER=".karnel-managed"
-OMNI_ROUTE_LOCAL_BIN="$OMNI_ROUTE_PKG/node_modules/karnelroute/bin/karnelroute.mjs"
+OMNI_ROUTE_LOCAL_BIN="$OMNI_ROUTE_PKG/node_modules/omniroute/bin/omniroute.mjs"
 
 _omni_route_data_owned() {
   [[ -f "$OMNI_ROUTE_DATA_DIR/$OMNI_ROUTE_MARKER" ]]
@@ -92,7 +92,7 @@ _omni_route_apply_platform_fixes() {
   fi
 
   local ig
-  ig=$(find "$pkg_root/node_modules/karnelroute/dist/node_modules/next" -path '*router-utils/instrumentation-globals.external.js' 2>/dev/null | head -1)
+  ig=$(find "$pkg_root/node_modules/omniroute/dist/node_modules/next" -path '*router-utils/instrumentation-globals.external.js' 2>/dev/null | head -1)
   if [ -n "$ig" ] && grep -q "An error occurred while loading instrumentation hook" "$ig"; then
     if perl -0pi -e 's/err\.message = `An error occurred while loading instrumentation hook: \$\{err\.message\}`;\s*\n\s*throw err;/err.message = `An error occurred while loading instrumentation hook: ${err.message}`;\n            console.error("[instrumentation] Non-fatal error in instrumentation hook (server continues):", err && err.message ? err.message : err);/g' "$ig"; then
       log_success "Patched Next.js instrumentation (hook errors are now non-fatal)"
@@ -103,7 +103,7 @@ _omni_route_apply_platform_fixes() {
 }
 
 _omni_route_wrap_and_fix() {
-  for cmd in karnelroute omni-route; do
+  for cmd in omniroute omni-route; do
     _omni_route_install_wrapper "$cmd" || true
   done
   _omni_route_apply_platform_fixes "$OMNI_ROUTE_PKG"
@@ -144,7 +144,7 @@ install_omni_route() {
   fi
 
   log_info "Installing omniRoute (this may take a while)..."
-  if command -v npm >/dev/null 2>&1 && karnel_npm i karnelroute --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
+  if command -v npm >/dev/null 2>&1 && karnel_npm i omniroute --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
   _fix_npm_shebang "omni-route" || return 1
     sed -i '1s|^#!/usr/bin/env node|#!'"$PREFIX"'/bin/node|' "$OMNI_ROUTE_LOCAL_BIN" 2>/dev/null
     _omni_route_wrap_and_fix
@@ -164,7 +164,7 @@ install_omni_route() {
 }
 
 uninstall_omni_route() {
-  if [[ ! -e "$PREFIX/bin/omni-route" && ! -e "$PREFIX/bin/karnelroute" && ! -e "$OMNI_ROUTE_DATA_DIR" ]]; then
+  if [[ ! -e "$PREFIX/bin/omni-route" && ! -e "$PREFIX/bin/omniroute" && ! -e "$OMNI_ROUTE_DATA_DIR" ]]; then
     log_info "omniRoute is not installed"
     return 2
   fi
@@ -175,7 +175,7 @@ uninstall_omni_route() {
   if _omni_route_data_owned; then
     rm -rf "$OMNI_ROUTE_DATA_DIR"
   fi
-  _omni_route_remove_wrapper karnelroute
+  _omni_route_remove_wrapper omniroute
   _omni_route_remove_wrapper omni-route
   log_success "omniRoute uninstalled"
   return 0
@@ -183,12 +183,12 @@ uninstall_omni_route() {
 
 _omni_route_installed_version() {
   local v
-  v=$(npm ls karnelroute --prefix "$OMNI_ROUTE_PKG" --depth=0 2>/dev/null | grep 'karnelroute@' | sed 's/.*@//')
+  v=$(npm ls omniroute --prefix "$OMNI_ROUTE_PKG" --depth=0 2>/dev/null | grep 'omniroute@' | sed 's/.*@//')
   echo "$v"
 }
 
 update_omni_route() {
-  _check_update_needed "omniRoute" "$(_omni_route_installed_version)" "$(_get_remote_npm_version karnelroute)" _do_update_omni_route
+  _check_update_needed "omniRoute" "$(_omni_route_installed_version)" "$(_get_remote_npm_version omniroute)" _do_update_omni_route
 }
 
 _do_update_omni_route() {
@@ -197,7 +197,7 @@ _do_update_omni_route() {
     return $?
   fi
 
-  if karnel_npm i karnelroute@latest --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
+  if karnel_npm i omniroute@latest --prefix "$OMNI_ROUTE_PKG" 2>>"$LOG_FILE"; then
     sed -i '1s|^#!/usr/bin/env node|#!'"$PREFIX"'/bin/node|' "$OMNI_ROUTE_LOCAL_BIN" 2>/dev/null
     _omni_route_wrap_and_fix
     if _omni_route_ok; then

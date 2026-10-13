@@ -231,11 +231,11 @@ assert_omni_route_preserves_unowned_wrappers() (
   export PREFIX="$TEST_ROOT/omni-route-prefix"
   export KARNEL_CACHE="$TEST_ROOT/omni-route-cache"
   export PATH="$PREFIX/bin:$PATH"
-  mkdir -p "$HOME/.karnel/packages/karnelroute/node_modules/karnelroute/bin" "$PREFIX/bin" "$KARNEL_CACHE"
+  mkdir -p "$HOME/.karnel/packages/omniroute/node_modules/omniroute/bin" "$PREFIX/bin" "$KARNEL_CACHE"
   printf '#!/usr/bin/env bash\nexit 1\n' >"$PREFIX/bin/omni-route"
-  printf '#!/usr/bin/env bash\nexit 1\n' >"$PREFIX/bin/karnelroute"
-  chmod +x "$PREFIX/bin/omni-route" "$PREFIX/bin/karnelroute"
-  printf '#!/usr/bin/env node\n' >"$HOME/.karnel/packages/karnelroute/node_modules/karnelroute/bin/karnelroute.mjs"
+  printf '#!/usr/bin/env bash\nexit 1\n' >"$PREFIX/bin/omniroute"
+  chmod +x "$PREFIX/bin/omni-route" "$PREFIX/bin/omniroute"
+  printf '#!/usr/bin/env node\n' >"$HOME/.karnel/packages/omniroute/node_modules/omniroute/bin/omniroute.mjs"
   # Load the real npm helper so the wrapper under test actually exists;
   # a no-op import leaves karnel_npm undefined and hides install failures.
   import() {
@@ -256,12 +256,12 @@ assert_omni_route_preserves_unowned_wrappers() (
     return 1
   fi
   grep -qF 'exit 1' "$PREFIX/bin/omni-route"
-  grep -qF 'exit 1' "$PREFIX/bin/karnelroute"
-  rm -f "$PREFIX/bin/omni-route" "$PREFIX/bin/karnelroute"
+  grep -qF 'exit 1' "$PREFIX/bin/omniroute"
+  rm -f "$PREFIX/bin/omni-route" "$PREFIX/bin/omniroute"
   _omni_route_install_wrapper omni-route
-  _omni_route_install_wrapper karnelroute
+  _omni_route_install_wrapper omniroute
   uninstall_omni_route
-  [[ ! -e "$PREFIX/bin/omni-route" && ! -e "$PREFIX/bin/karnelroute" ]]
+  [[ ! -e "$PREFIX/bin/omni-route" && ! -e "$PREFIX/bin/omniroute" ]]
 )
 run_test "omniRoute preserves unowned wrappers" assert_omni_route_preserves_unowned_wrappers
 
