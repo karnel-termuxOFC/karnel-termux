@@ -17,6 +17,13 @@
 #    stdout/stderr intact and retries the exact same command with --force only
 #    when npm failed with that specific platform rejection.
 #
+# 3. EALLOWGIT. npm 12 ships `allow-git = none`, so a dependency pinned to a
+#    git URL is refused outright - walkie and omniRoute both end here with
+#    "Fetching packages of type git have been disabled". Installing
+#    third-party packages is what karnel is for, so the install verbs ask npm
+#    for every git source instead of leaving each installer to loosen a
+#    supply-chain policy on its own.
+#
 # The resolved command is exported as KARNEL_NPM_CMD so installers that need a
 # raw npm-looking shell line can still route through the same resolution.
 
@@ -51,9 +58,17 @@ _karnel_npm_resolve() {
 
 karnel_npm() {
   local err_file="" retry_file="" dir rc=0
-  local -a dirs=()
+  local -a dirs=() npm_args=()
 
   _karnel_npm_resolve || :
+
+  # Keep the verb as $1: callers and tests dispatch on it, and npm accepts
+  # config flags anywhere in the command line (the --force retry below relies
+  # on that too).
+  npm_args+=("$@")
+  case "${1:-}" in
+    install|i|ci|update|upgrade|rebuild) npm_args+=(--allow-git all) ;;
+  esac
 
   [[ -n "${KARNEL_CACHE:-}" ]] && dirs+=("$KARNEL_CACHE")
   [[ -n "${TMPDIR:-}" ]] && dirs+=("$TMPDIR")
@@ -66,13 +81,13 @@ karnel_npm() {
   done
 
   if [[ -z "$err_file" ]]; then
-    "${KARNEL_NPM_CMD[@]}" "$@"
+    "${KARNEL_NPM_CMD[@]}" ${npm_args[@]+"${npm_args[@]}"}
     return $?
   fi
 
   # `|| rc=$?` keeps this helper working when the caller runs with `set -e`;
   # a bare `npm ...; rc=$?` would abort before rc is captured.
-  "${KARNEL_NPM_CMD[@]}" "$@" 2>"$err_file" || rc=$?
+  "${KARNEL_NPM_CMD[@]}" ${npm_args[@]+"${npm_args[@]}"} 2>"$err_file" || rc=$?
   if [[ -s "$err_file" ]]; then
     cat "$err_file" >&2
   fi
@@ -83,7 +98,7 @@ karnel_npm() {
     fi
     retry_file="${err_file}.retry"
     rc=0
-    "${KARNEL_NPM_CMD[@]}" "$@" --force 2>"$retry_file" || rc=$?
+    "${KARNEL_NPM_CMD[@]}" ${npm_args[@]+"${npm_args[@]}"} --force 2>"$retry_file" || rc=$?
     if [[ -s "$retry_file" ]]; then
       cat "$retry_file" >&2
     fi
