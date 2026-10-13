@@ -94,7 +94,9 @@ _freebuff_binary_runs() {
   # The braces redirect the shell itself: bash prints "Segmentation fault" to
   # its own stderr, not to the child's, so `2>/dev/null` on the command alone
   # would still leak the crash of a damaged runtime into the install output.
-  { timeout 30 "$bin" --version >/dev/null 2>&1; rc=$?; } 2>/dev/null
+  # -k and </dev/null as in compat_probe, or a stopped runtime makes `timeout`
+  # wait forever while holding the lifecycle lock.
+  { timeout -k 5 30 "$bin" --version </dev/null >/dev/null 2>&1; rc=$?; } 2>/dev/null
   ((rc == 0))
 }
 
@@ -109,7 +111,7 @@ _verify_freebuff_entry() {
     log_error "Freebuff is not on PATH after install"
     return 1
   fi
-  { timeout 30 "$entry" --version >/dev/null 2>&1; rc=$?; } 2>/dev/null
+  { timeout -k 5 30 "$entry" --version </dev/null >/dev/null 2>&1; rc=$?; } 2>/dev/null
   if ((rc != 0)); then
     log_error "Freebuff does not run after install (exit $rc)"
     return 1

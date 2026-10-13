@@ -204,7 +204,7 @@ _is_tool_available() {
     python) command -v python3 &>/dev/null || command -v python &>/dev/null ;;
     eslint|prettier|vitest|jest|markdownlint-cli2|tsc|biome)
       command -v "$tool" &>/dev/null || {
-        command -v npx &>/dev/null && timeout 5 npx --no-install "$tool" --version &>/dev/null
+        command -v npx &>/dev/null && timeout -k 3 5 npx --no-install "$tool" --version </dev/null &>/dev/null
       } ;;
     "npm audit") command -v npm &>/dev/null ;;
     "go vet"|"go test") command -v go &>/dev/null ;;

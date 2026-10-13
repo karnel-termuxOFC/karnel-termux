@@ -253,10 +253,17 @@ compat_proot_available() {
 # 0 when the binary starts, 1 when it demonstrably does not.
 # A timeout counts as success: the process was created, it simply did not
 # exit, which is exactly what an interactive tool does with --version.
+#
+# Two properties keep this from hanging a whole install:
+#   stdin is /dev/null, so a tool that reads the terminal is not stopped by
+#   SIGTTIN while it runs in the background of the installer;
+#   -k turns the deadline into a SIGKILL, because a tool that is already
+#   stopped ignores the plain SIGTERM and a `timeout` without -k then waits
+#   for it forever while holding the lifecycle lock.
 compat_probe() {
   local wrapper="$1" out rc
   [[ -x "$wrapper" ]] || return 1
-  out="$(timeout "${COMPAT_PROBE_TIMEOUT:-15}" "$wrapper" --version 2>&1)"
+  out="$(timeout -k 5 "${COMPAT_PROBE_TIMEOUT:-15}" "$wrapper" --version </dev/null 2>&1)"
   rc=$?
   if ((rc == 124)); then
     return 0

@@ -497,7 +497,7 @@ _walkie_verify_impl() {
     log_error "walkie.js not found. Run install again."
     return 1
   fi
-  if timeout 20 "$(_walkie_node)" "$js" status &>>"$LOG_FILE"; then
+  if timeout -k 5 20 "$(_walkie_node)" "$js" status </dev/null &>>"$LOG_FILE"; then
     log_info "walkie installation finished. (mode: $(_walkie_install_type))"
     log_info "Run 'walkie' to execute it."
     return 0

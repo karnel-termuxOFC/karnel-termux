@@ -701,6 +701,89 @@ assert_the_dispatcher_brackets_installing_commands() {
   return 0
 }
 
+# A tool that will not go away at the deadline - freebuff's runtime was caught
+# stopped mid self-update and never acted on the SIGTERM - makes a `timeout`
+# without -k wait for it forever. The installer then sits on the lifecycle lock
+# and every later command reports "another operation is already running". The
+# probe has to kill it, so a broken tool costs seconds instead of a lock.
+assert_a_probe_kills_a_tool_that_will_not_exit() (
+  setup_compat_env
+  local stub runner rc=0 start elapsed
+  stub="$TEST_ROOT/stuck.sh"
+  runner="$TEST_ROOT/run-probe.sh"
+  printf '#!%s\n' "$(command -v bash)" >"$stub"
+  printf '%s\n' 'trap "" TERM' 'while :; do sleep 1; done' >>"$stub"
+  chmod +x "$stub"
+
+  {
+    printf '#!%s\n' "$(command -v bash)"
+    declare -f compat_probe
+    printf '%s\n' 'COMPAT_PROBE_TIMEOUT=1' 'compat_probe "$1"'
+  } >"$runner"
+  chmod +x "$runner"
+
+  # The outer timeout is the test's own guard: without -k in compat_probe this
+  # comes back killed after 30s instead of hanging the suite for good. Its own
+  # non-zero status must not trip the runner's set -e before the assertions.
+  start=$(date +%s)
+  rc=0
+  timeout -k 5 30 "$runner" "$stub" >/dev/null 2>&1 || rc=$?
+  elapsed=$(( $(date +%s) - start ))
+
+  # When the runner is killed its probe dies with it, but the stuck tool it was
+  # waiting on does not; take it down so a failing run leaves nothing behind.
+  pkill -9 -f "$stub" 2>/dev/null || true
+  pkill -9 -f "$runner" 2>/dev/null || true
+
+  # deadline + kill-after, at which timeout reports 124 and compat_probe counts
+  # it as "it started". What must hold is that the probe came back with a
+  # status inside its own contract, and that it came back at all.
+  ((rc == 0 || rc == 1)) || {
+    printf '%s\n' "a stuck tool reported $rc, outside the probe's contract" >&2
+    return 1
+  }
+  ((elapsed <= 10)) || {
+    printf '%s\n' "a stuck tool was awaited for ${elapsed}s" >&2
+    return 1
+  }
+  return 0
+)
+
+# The same rule, checked statically: every probe that runs an installed tool
+# needs both -k and </dev/null, and the compat probe is the one every install
+# goes through.
+assert_tool_probes_cannot_hold_the_lock() {
+  local hit count=0 file lineno line
+  while IFS= read -r hit; do
+    file="${hit%%:*}"
+    lineno="${hit#*:}"
+    lineno="${lineno%%:*}"
+    line="${hit#*:}"
+    line="${line#*:}"
+    count=$((count + 1))
+    [[ "$line" == *"-k "* ]] || {
+      printf '%s\n' "$file:$lineno probes a tool without -k" >&2
+      return 1
+    }
+    [[ "$line" == *"</dev/null"* ]] || {
+      printf '%s\n' "$file:$lineno probes a tool with the terminal attached" >&2
+      return 1
+    }
+  done < <(grep -rn 'timeout ' "$ROOT_DIR/karnel" | grep -E -- '--version| status')
+  ((count > 0)) || {
+    printf '%s\n' "no tool probe found to assert on" >&2
+    return 1
+  }
+
+  local probe
+  probe="$(grep -n 'COMPAT_PROBE_TIMEOUT' "$ROOT_DIR/karnel/utils/compat.sh" | head -1)"
+  [[ -n "$probe" && "$probe" == *"-k "* && "$probe" == *"</dev/null"* ]] || {
+    printf '%s\n' "compat_probe lost -k or </dev/null: $probe" >&2
+    return 1
+  }
+  return 0
+}
+
 run_test "escalates a loader-only wrapper to the glibc userland" assert_escalates_to_the_glibc_userland
 run_test "adapt_installed climbs the ladder on the installer path" assert_adapt_installed_climbs_the_ladder
 run_test "an existing wrapper is re-evaluated on the next install" assert_existing_wrapper_is_reevaluated
@@ -729,6 +812,8 @@ run_test "fix_shebang keeps interpreter arguments" assert_fix_shebang_keeps_inte
 run_test "fix_shebang leaves unknown interpreters alone" assert_fix_shebang_gives_up_on_unknown_interpreters
 run_test "fix_shebangs counts changed files, not inspected ones" assert_fix_shebangs_counts_only_changes
 run_test "glibc detection agrees with readelf" assert_detection_matches_readelf
+run_test "a tool that will not exit is killed, not awaited" assert_a_probe_kills_a_tool_that_will_not_exit
+run_test "every probe of an installed tool can hold the lock" assert_tool_probes_cannot_hold_the_lock
 
 printf '1..%d\n' "$pass"
 if ((failed > 0)); then
