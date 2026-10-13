@@ -385,7 +385,7 @@ _walkie_generate_wrappers_impl() {
 # Delegates to the real binary (fixes shebang issues on Termux).
 exec "@REAL@" "$@"
 WRAPEOF
-    sed -i "s|@NAME@|${name}|g; s|@REAL@|${real}|g" "$wrap_dir/$name"
+    sed -i "s|@NAME@|${name}|g; s|@REAL@|${real}|g; s|^#!/usr/bin/env bash$|#!$PREFIX/bin/bash|" "$wrap_dir/$name"
     chmod +x "$wrap_dir/$name"
   }
 
@@ -407,7 +407,7 @@ if [[ "$first" == '#!/usr/bin/env '* ]]; then
 fi
 exec "$REAL" "$@"
 WRAPEOF
-    sed -i "s|@NAME@|${name}|g; s|@REAL@|${real}|g" "$wrap_dir/$name"
+    sed -i "s|@NAME@|${name}|g; s|@REAL@|${real}|g; s|^#!/usr/bin/env bash$|#!$PREFIX/bin/bash|" "$wrap_dir/$name"
     chmod +x "$wrap_dir/$name"
   }
 
@@ -481,6 +481,9 @@ _walkie_install_launcher_impl() {
     return 1
   fi
   chmod +x "$WALKIE_BIN"
+  # The packaged launcher starts with #!/usr/bin/env bash, and there is no
+  # /usr/bin/env on Termux, so the command exits 127 before it runs a line.
+  sed -i "1s|^#!/usr/bin/env bash\$|#!$PREFIX/bin/bash|" "$WALKIE_BIN"
   return 0
 }
 
