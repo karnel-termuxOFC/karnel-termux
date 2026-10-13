@@ -541,8 +541,32 @@ install_walkie() {
   _walkie_verify_ownership || return 1
 
   log_info "Installing walkie..."
+  # Every step below runs before the marker exists, so a failure would leave an
+  # unowned tree and an unowned command behind and the next install would refuse
+  # to touch either. Remember what was already there; on failure take back only
+  # what this run created.
+  local data_preexisting=0 bin_preexisting=0
+  [[ -e "$WALKIE_DATA_DIR" ]] && data_preexisting=1
+  [[ -e "$WALKIE_BIN" ]] && bin_preexisting=1
   mkdir -p "$(dirname "$LOG_FILE")" "$WALKIE_DATA_DIR"
 
+  if ! _walkie_stage_install; then
+    if ((bin_preexisting == 0)) && [[ -e "$WALKIE_BIN" ]] && ! _walkie_wrapper_owned; then
+      rm -f "$WALKIE_BIN"
+    fi
+    if ((data_preexisting == 0)) && [[ -e "$WALKIE_DATA_DIR" ]] && ! _walkie_data_owned; then
+      rm -rf "$WALKIE_DATA_DIR"
+    fi
+    return 1
+  fi
+
+  : >"$WALKIE_DATA_DIR/$WALKIE_MARKER"
+  sha256sum "$WALKIE_BIN" >"$WALKIE_WRAPPER_MARKER"
+  log_success "walkie installed"
+  return 0
+}
+
+_walkie_stage_install() {
   _walkie_dependencies || return 1
   _walkie_install_pkg || return 1
   _walkie_apply_netlink_patch || return 1
@@ -552,10 +576,6 @@ install_walkie() {
   _walkie_generate_wrappers || return 1
   _walkie_install_launcher || return 1
   _walkie_verify || return 1
-
-  : >"$WALKIE_DATA_DIR/$WALKIE_MARKER"
-  sha256sum "$WALKIE_BIN" >"$WALKIE_WRAPPER_MARKER"
-  log_success "walkie installed"
   return 0
 }
 

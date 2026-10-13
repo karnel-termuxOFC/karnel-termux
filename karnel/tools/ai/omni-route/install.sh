@@ -120,6 +120,13 @@ install_omni_route() {
 
   _omni_route_verify_ownership || return 1
 
+  # npm creates the prefix tree before anything marks it as ours. If the run
+  # fails, that tree has no marker and every later install refuses to touch it,
+  # so the tool can never be installed again. Remember whether the directory
+  # was already there and put it back the way it was.
+  local data_preexisting=0
+  [[ -e "$OMNI_ROUTE_DATA_DIR" ]] && data_preexisting=1
+
   if [ -f "$OMNI_ROUTE_LOCAL_BIN" ]; then
     sed -i '1s|^#!/usr/bin/env node|#!'"$PREFIX"'/bin/node|' "$OMNI_ROUTE_LOCAL_BIN" 2>/dev/null
     _omni_route_wrap_and_fix
@@ -147,6 +154,11 @@ install_omni_route() {
     fi
   fi
 
+  # Only the residue is ours to take back: an unowned tree this run created is
+  # what would block the next install, while a marked one is safe to keep.
+  if ((data_preexisting == 0)) && [[ -e "$OMNI_ROUTE_DATA_DIR" ]] && ! _omni_route_data_owned; then
+    rm -rf "$OMNI_ROUTE_DATA_DIR"
+  fi
   log_error "Failed to install omniRoute; see $LOG_FILE for npm output"
   return 1
 }
