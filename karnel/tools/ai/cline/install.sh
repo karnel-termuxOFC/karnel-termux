@@ -83,14 +83,24 @@ _cline_verify_ownership() {
     log_error "Refusing to replace unowned Cline data: $CLINE_DATA_DIR"
     return 1
   fi
-  if [[ -e "$PREFIX/bin/cline" ]] && ! _cline_wrapper_owned; then
+  if [[ -e "$PREFIX/bin/cline" ]] && ! _cline_wrapper_owned && ! _cline_wrapper_is_npm_managed; then
     log_error "Refusing to replace unowned command: $PREFIX/bin/cline"
     return 1
   fi
-  if command -v cline &>/dev/null && ! _cline_wrapper_owned; then
+  if command -v cline &>/dev/null && ! _cline_wrapper_owned && ! _cline_wrapper_is_npm_managed; then
     log_error "Refusing to shadow the existing cline command: $(command -v cline)"
     return 1
   fi
+}
+
+# `npm i -g cline` creates this entry and `npm uninstall -g cline` is what
+# removes it, so it is npm's file rather than a user's: an install that runs
+# that very npm command may take it over, and an uninstall hands it back.
+_cline_wrapper_is_npm_managed() {
+  local resolved
+  [[ -L "$PREFIX/bin/cline" ]] || return 1
+  resolved="$(readlink -f -- "$PREFIX/bin/cline" 2>/dev/null)" || return 1
+  [[ "$resolved" == "$PREFIX/lib/node_modules/"* ]]
 }
 
 _cline_install_deps() {
@@ -130,6 +140,12 @@ _cline_install_global_impl() {
     return 1
   fi
   _fix_npm_shebang "cline" || return 1
+
+  # The download below writes into this directory; mark it as ours before it
+  # starts, so a failure cannot leave an unowned tree that every later install
+  # would refuse to touch.
+  mkdir -p "$CLINE_DATA_DIR" || return 1
+  : >"$CLINE_DATA_DIR/$CLINE_MARKER" || return 1
 
   local version tarball
   version=$(karnel_npm view cline version 2>/dev/null || echo "3.0.38")
@@ -189,21 +205,21 @@ _cline_create_wrapper() {
 
 CLINE_BIN="$CLINE_DATA_DIR/cli-linux-arm64/bin/cline"
 
-if [ ! -f "$CLINE_BIN" ]; then
+if [ ! -f "\$CLINE_BIN" ]; then
   CLINE_BIN="$PREFIX/lib/node_modules/cline/bin/.cline"
 fi
 
-if [ ! -f "$CLINE_BIN" ]; then
+if [ ! -f "\$CLINE_BIN" ]; then
   CLINE_BIN="$PREFIX/lib/node_modules/@cline/cli-linux-arm64/bin/cline"
 fi
 
-if [ ! -f "$CLINE_BIN" ]; then
+if [ ! -f "\$CLINE_BIN" ]; then
   echo "Erro: Cline binary nao encontrado"
   echo "Rode: npm i -g cline"
   exit 1
 fi
 
-exec glibc-runner "$CLINE_BIN" "$@"
+exec glibc-runner "\$CLINE_BIN" "\$@"
 GLIBCWRAPPER
   chmod 755 "$temporary" || { rm -f "$temporary"; return 1; }
   mv -f "$temporary" "$PREFIX/bin/cline" || return 1
@@ -238,9 +254,21 @@ uninstall_cline() {
   mkdir -p "$(dirname "$LOG_FILE")"
 
   if ! _cline_data_owned && ! _cline_wrapper_owned; then
-    if [ -e "$CLINE_DATA_DIR" ] || [ -e "$PREFIX/bin/cline" ]; then
+    if [ -e "$CLINE_DATA_DIR" ]; then
       _cline_verify_ownership
       return $?
+    fi
+    if _cline_wrapper_is_npm_managed; then
+      # Nothing of ours is left, and the entry that is there belongs to npm:
+      # hand it back rather than reporting success while leaving it in place.
+      karnel_npm uninstall -g cline &>>"$LOG_FILE" || true
+      rm -f "$PREFIX/bin/cline"
+      log_success "Cline CLI uninstalled"
+      return 0
+    fi
+    if [ -e "$PREFIX/bin/cline" ]; then
+      log_error "Refusing to replace unowned command: $PREFIX/bin/cline"
+      return 1
     fi
     log_info "Cline CLI is not installed"
     return 2
