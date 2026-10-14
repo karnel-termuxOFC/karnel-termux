@@ -166,10 +166,71 @@ safe_extract_zip() {
   unzip -q "$archive" -d "$outdir" >>"$LOG_FILE" 2>&1
 }
 
+# The marker that proves a file is ours sits inside the tool's data directory,
+# so deleting that directory strips the command of its proof and every later
+# install stops at "Refusing to replace unowned command" with no way out. The
+# cache keeps a second record, keyed by path, of every file karnel wrote, so the
+# proof outlives the directory that held the original.
+karnel_ownership_index_path() {
+  printf '%s/ownership/%s' "${KARNEL_CACHE:-$HOME/.cache/karnel}" \
+    "$(printf '%s' "$1" | sha256sum | cut -d' ' -f1)"
+}
+
+karnel_record_owned_file() {
+  local file="$1" idx tmp
+  idx="$(karnel_ownership_index_path "$file")" || return 1
+  mkdir -p "$(dirname "$idx")" || return 1
+  tmp="$(mktemp "${idx}.XXXXXX")" || return 1
+  if sha256sum "$file" >"$tmp" && mv -f "$tmp" "$idx"; then
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+karnel_indexed_file_owned() {
+  local file="$1" idx
+  [[ -f "$file" && ! -L "$file" ]] || return 1
+  idx="$(karnel_ownership_index_path "$file")"
+  [[ -f "$idx" ]] || return 1
+  [[ "$(sha256sum "$file" 2>/dev/null)" == "$(<"$idx")" ]]
+}
+
 installer_file_owned() {
   local target="$1" marker="$2"
-  [[ -f "$target" && ! -L "$target" && -f "$marker" ]] || return 1
-  [[ "$(sha256sum "$target" 2>/dev/null)" == "$(<"$marker")" ]]
+  [[ -f "$target" && ! -L "$target" ]] || return 1
+  if [[ -f "$marker" ]] &&
+    [[ "$(sha256sum "$target" 2>/dev/null)" == "$(<"$marker")" ]]; then
+    return 0
+  fi
+  # The marker lives in the data directory; the cache copy outlives it.
+  karnel_indexed_file_owned "$target"
+}
+
+# A wrapper karnel generated names its own tool directory inside itself, and
+# every file karnel writes is entered in the ownership index: either is enough
+# to recognise an orphan once the directory holding its marker is gone.
+karnel_command_is_karnel_generated() {
+  local file="$1" id="${2:-}"
+  [[ -f "$file" && ! -L "$file" ]] || return 1
+  karnel_indexed_file_owned "$file" && return 0
+  [[ -n "$id" ]] && grep -qa "karnel-data/$id" "$file" 2>/dev/null && return 0
+  grep -qa 'karnel-managed' "$file" 2>/dev/null && return 0
+  return 1
+}
+
+# Set an orphaned command aside rather than overwriting it or refusing: nothing
+# is destroyed, the file stays available for inspection, and the installer can
+# start from a clean slate.
+karnel_quarantine_orphaned_command() {
+  local file="$1" id="$2" dir dst
+  karnel_command_is_karnel_generated "$file" "$id" || return 1
+  dir="${KARNEL_CACHE:-$HOME/.cache/karnel}/orphaned-commands"
+  mkdir -p "$dir" || return 1
+  dst="$dir/$(basename -- "$file").$(date +%Y%m%d%H%M%S)"
+  mv -f -- "$file" "$dst" || return 1
+  log_info "Set an orphaned command aside: $file -> $dst"
+  return 0
 }
 
 activate_installer_file() {
@@ -196,6 +257,7 @@ activate_installer_file() {
     [[ -z "$backup" ]] || mv -f "$backup" "$target"
     return 1
   fi
+  karnel_record_owned_file "$target" || true
   [[ -z "$backup" ]] || rm -f "$backup"
 }
 
@@ -294,7 +356,9 @@ replace_managed_directory() {
 record_managed_file() {
   local file="$1" marker="$2"
   mkdir -p "$(dirname "$marker")" || return 1
-  sha256sum "$file" >"$marker"
+  sha256sum "$file" >"$marker" || return 1
+  # A cache copy as well, so the proof survives losing the data directory.
+  karnel_record_owned_file "$file" || true
 }
 
 managed_file_matches() {

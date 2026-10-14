@@ -291,6 +291,69 @@ assert_nvchad_preserves_unowned_paths() (
   [[ ! -e "$HOME/.local/state/nvim" && ! -e "$KARNEL_DATA/nvchad-termux" ]]
 )
 
+
+# The marker that proves a command is ours lives inside the tool's data
+# directory. Deleting that directory has to leave the tool installable: our own
+# wrapper is set aside, a file we never wrote stays exactly where it is.
+assert_orphaned_command_is_quarantined() (
+  export HOME="$TEST_ROOT/orphan-home"
+  export KARNEL_CACHE="$TEST_ROOT/orphan-cache"
+  export PREFIX="$TEST_ROOT/orphan-prefix"
+  mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  # shellcheck source=../karnel/utils/install.sh
+  source "$ROOT_DIR/karnel/utils/install.sh"
+
+  printf 'launcher for %s\n' "karnel-data/demo-tool" >"$PREFIX/bin/demo-tool"
+  karnel_quarantine_orphaned_command "$PREFIX/bin/demo-tool" demo-tool
+  [[ ! -e "$PREFIX/bin/demo-tool" ]]
+  [[ -f "$(find "$KARNEL_CACHE/orphaned-commands" -name 'demo-tool.*' -print -quit)" ]]
+)
+
+assert_user_command_is_never_quarantined() (
+  export HOME="$TEST_ROOT/legacy-home"
+  export KARNEL_CACHE="$TEST_ROOT/legacy-cache"
+  export PREFIX="$TEST_ROOT/legacy-prefix"
+  mkdir -p "$PREFIX/bin" "$KARNEL_CACHE"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  # shellcheck source=../karnel/utils/install.sh
+  source "$ROOT_DIR/karnel/utils/install.sh"
+
+  printf 'binary the user installed\n' >"$PREFIX/bin/demo-tool"
+  if karnel_quarantine_orphaned_command "$PREFIX/bin/demo-tool" demo-tool; then
+    return 1
+  fi
+  [[ "$(<"$PREFIX/bin/demo-tool")" == 'binary the user installed' ]]
+  [[ ! -e "$KARNEL_CACHE/orphaned-commands" ]]
+)
+
+assert_ownership_record_outlives_the_data_directory() (
+  export HOME="$TEST_ROOT/index-home"
+  export KARNEL_CACHE="$TEST_ROOT/index-cache"
+  export KARNEL_DATA="$TEST_ROOT/index-data"
+  mkdir -p "$KARNEL_DATA/demo-tool" "$KARNEL_CACHE" "$TEST_ROOT/prefix/bin"
+  import() { :; }
+  log_info() { :; }
+  log_error() { :; }
+  # shellcheck source=../karnel/utils/install.sh
+  source "$ROOT_DIR/karnel/utils/install.sh"
+
+  target="$TEST_ROOT/prefix/bin/demo-tool"
+  marker="$KARNEL_DATA/demo-tool/.karnel-managed"
+  printf 'the wrapper karnel wrote\n' >"$target"
+  record_managed_file "$target" "$marker"
+  rm -rf "$KARNEL_DATA/demo-tool"
+
+  installer_file_owned "$target" "$marker"
+  # A file karnel never recorded is still not ours to replace.
+  printf 'something else\n' >"$target"
+  if installer_file_owned "$target" "$marker"; then return 1; fi
+)
+
 assert_font_uninstall_preserves_custom_font
 assert_kiro_install_rejects_unusable_binary
 assert_code_server_install_preserves_configuration
@@ -303,4 +366,7 @@ assert_ui_and_editor_status_are_karnel_owned
 assert_ui_uninstall_preserves_malformed_blocks
 assert_hermes_uninstall_preserves_user_home
 assert_nvchad_preserves_unowned_paths
-printf 'Installer data-safety contracts: 12 passed\n'
+assert_orphaned_command_is_quarantined
+assert_user_command_is_never_quarantined
+assert_ownership_record_outlives_the_data_directory
+printf 'Installer data-safety contracts: 15 passed\n'
