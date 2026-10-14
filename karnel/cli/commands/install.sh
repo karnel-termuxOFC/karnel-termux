@@ -224,6 +224,11 @@ _install_specific_tools() {
       fi
 
       if declare -f "$func_name" &>/dev/null; then
+        # Remember whether the data directory was already there so a failure
+        # can take back only what this run created - an unowned leftover is
+        # what makes the ownership guard refuse every later attempt.
+        local data_preexisting=0
+        [[ -e "${KARNEL_DATA:-}/$tool" ]] && data_preexisting=1
         "$func_name"
         local func_rc=$?
 
@@ -260,6 +265,7 @@ _install_specific_tools() {
             ((skipped_count++))
             ;;
           *)
+            _ai_tool_rollback_data "$tool" "$data_preexisting"
             ((failed_count++))
             ;;
         esac
