@@ -224,6 +224,7 @@ _install_specific_tools() {
       fi
 
       if declare -f "$func_name" &>/dev/null; then
+        _ai_tool_reclaim_orphaned_commands "$tool"
         # Remember whether the data directory was already there so a failure
         # can take back only what this run created - an unowned leftover is
         # what makes the ownership guard refuse every later attempt.

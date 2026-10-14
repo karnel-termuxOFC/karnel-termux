@@ -206,6 +206,33 @@ _ai_tool_rollback_data() {
   rm -rf -- "$dir"
 }
 
+# The wrapper's ownership marker lives inside the tool's data directory, so
+# removing that directory leaves the command behind with nothing proving it is
+# ours and every later install stops at "Refusing to replace unowned command".
+# Recognise our own wrapper, set it aside - nothing is destroyed - and let the
+# installer start from a clean slate. A directory that is still there is left to
+# the ownership guard, which is protecting something real.
+_ai_tool_reclaim_orphaned_commands() {
+  local id="$1"
+  local entry rid rname bins bin
+  local -a binlist
+  [[ -n "${KARNEL_DATA:-}" ]] || return 0
+  [[ -e "${KARNEL_DATA:?}/${id}" ]] && return 0
+  bins=""
+  for entry in "${AI_TOOLS_REGISTRY[@]}"; do
+    IFS=':' read -r rid rname bins <<< "$entry"
+    [[ "$rid" == "$id" ]] && break
+    bins=""
+  done
+  [[ -n "$bins" ]] || return 0
+  IFS=',' read -ra binlist <<< "$bins"
+  for bin in "${binlist[@]}"; do
+    [[ -n "$bin" ]] || continue
+    karnel_quarantine_orphaned_command "$PREFIX/bin/$bin" "$id" || true
+  done
+  return 0
+}
+
 _run_ai_tool_action() {
   local action="$1"
   local id="$2"
@@ -227,6 +254,7 @@ _run_ai_tool_action() {
     local data_preexisting=0
     [[ -e "${KARNEL_DATA:-}/$id" ]] && data_preexisting=1
     local rc=0
+    _ai_tool_reclaim_orphaned_commands "$id"
     "$func_name" || rc=$?
     if (( rc == 0 || rc == 2 )) && [[ "$action" == "install" || "$action" == "update" ]]; then
       _ai_tool_compat_adapt "$id"
