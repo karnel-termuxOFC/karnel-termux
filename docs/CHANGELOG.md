@@ -6,6 +6,13 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.7
+
+- **The rollback from 4.18.6 now runs on the command people actually use.** It had been wired into `_run_ai_tool_action`, but `karnel install ai --<tool>` does not go through that - `_install_specific_tools` calls each installer directly, so the published fix was a no-op in practice. A real run against 4.18.6 proved it: a failed `antigravity-cli` install still left an unowned directory behind. The same record-and-hand-back now happens on the branch the caller already had, and the directory is gone after a failure with the retry reaching exactly the same error.
+- **Deleting a tool's data directory no longer bricks it.** The marker that proves a command is ours lives inside that directory, so removing it left `$PREFIX/bin/<tool>` with no proof and every later install stopped at `Refusing to replace unowned command` - `droid` had to be repaired by hand. karnel now keeps a second ownership record in the cache, written wherever it writes a marker, and `installer_file_owned` falls back to it; before running an installer, both dispatchers recognise a wrapper karnel generated (it names its own tool directory inside itself) and move it to a quarantine in the cache instead of refusing. Nothing is destroyed, and a file karnel never wrote is left exactly where it is - proven by a contract that checks a user's own binary is refused while an orphaned wrapper is set aside, alongside a contract that the ownership record outlives the directory that held the original.
+- **Verified end to end on the device:** `droid` and `walkie` were installed, their data directories deleted by hand, and reinstalled with no manual repair - both quarantined their orphan and opened again.
+
+
 ## 4.18.6
 
 - **A failed install can no longer leave a tool permanently uninstallable - not in one installer, in all of them.** The full 46-AI sweep (uninstall, reinstall, then launch under a real PTY) caught `droid` wedged after a single failure: its download creates the data directory before anything stamps it as ours, and the ownership guard then reported `Refusing to replace unowned Droid data` on every later attempt. The installer now remembers whether the directory was already there and removes only what its own run created. The same guard with the same missing cleanup exists in fifteen other installers, so the dispatcher does it for all of them: it records the state before the install, and on failure removes a tree it created that nothing marked as ours - a pre-existing directory and a marked one are both left alone, and an id containing a path separator or `..` is refused so the helper is safe on its own.
