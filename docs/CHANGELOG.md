@@ -6,6 +6,12 @@ layout: base
 
 # Documentation Changelog
 
+## 4.18.6
+
+- **A failed install can no longer leave a tool permanently uninstallable - not in one installer, in all of them.** The full 46-AI sweep (uninstall, reinstall, then launch under a real PTY) caught `droid` wedged after a single failure: its download creates the data directory before anything stamps it as ours, and the ownership guard then reported `Refusing to replace unowned Droid data` on every later attempt. The installer now remembers whether the directory was already there and removes only what its own run created. The same guard with the same missing cleanup exists in fifteen other installers, so the dispatcher does it for all of them: it records the state before the install, and on failure removes a tree it created that nothing marked as ours - a pre-existing directory and a marked one are both left alone, and an id containing a path separator or `..` is refused so the helper is safe on its own.
+- **Proof.** With the inherited residue removed, `droid` installs, installs a second time and opens at `0.240.1`. The rollback itself is checked four ways: a new unmarked directory is removed, a pre-existing one is kept, a marked one is kept, and a traversal id changes nothing. `tests/tool-installers.sh`, `npm test` and the 330-script shellcheck gate are all green.
+
+
 ## 4.18.5
 
 - **`loading` hands its command's variables back to the caller.** The spinner helper ran the command in a background subshell so it could keep animating, which meant everything the command assigned was gone by the time it returned — on the device `codebuff` and `qoder` both died at `chmod: cannot access ''`. The spinner is now the background process and the command runs in the caller, with the entry directory restored afterwards so a step that `cd`s stays as contained as it used to be. A new `tests/loading.sh` covers five behaviours (exit codes, kept assignments, printed output, a `cd` inside the step, and a failing step) and is wired into `tests/run.sh`, which had never listed it; putting the old body back fails it.
