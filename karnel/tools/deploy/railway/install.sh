@@ -31,7 +31,11 @@ _railway_data_is_karnel_owned() {
   [ -f "$_RAILWAY_DATA_MARKER" ] && [ -f "$_RAILWAY_DATA_MANIFEST" ] && [ -f "$_RAILWAY_DATA_INVENTORY" ] &&
     [ "$(<"$_RAILWAY_DATA_MARKER")" = 'Karnel Railway CLI data' ] &&
     cmp -s "$_RAILWAY_DATA_INVENTORY" <(_railway_data_inventory) &&
-    (cd / && sha256sum -c "$_RAILWAY_DATA_MANIFEST" >/dev/null 2>&1)
+    # An empty manifest is the normal state right after a fresh mark, and GNU
+    # sha256sum -c exits 1 on an empty file - which made the very directory this
+    # installer had just claimed look foreign, so every retry was refused.
+    { [ ! -s "$_RAILWAY_DATA_MANIFEST" ] ||
+      (cd / && sha256sum -c "$_RAILWAY_DATA_MANIFEST" >/dev/null 2>&1); }
 }
 
 _railway_mark_install() {
@@ -100,7 +104,10 @@ _install_railway_manual_impl() {
   mkdir -p "$RAILWAY_DATA_DIR" "$PREFIX/bin"
 
   local latest_version
-  latest_version=$(curl -fsSL --connect-timeout 10 "https://api.github.com/repos/railwayapp/cli/releases/latest" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+  # grep+sed on the raw payload grabs the last quoted string on the line, so a
+  # one-line JSON body handed back the release notes instead of the tag and the
+  # download URL became "railway-## Changes...". Ask jq for the field.
+  latest_version=$(curl -fsSL --connect-timeout 10 "https://api.github.com/repos/railwayapp/cli/releases/latest" 2>/dev/null | jq -r '.tag_name // empty')
   
   if [ -z "$latest_version" ]; then
     log_warn "Cannot fetch latest Railway version from GitHub API"
@@ -109,19 +116,23 @@ _install_railway_manual_impl() {
 
   local version="${latest_version#v}"
 
-  local tarball_url="https://github.com/railwayapp/cli/releases/download/${latest_version}/railway-${version}-aarch64-linux.tar.gz"
-  local binary_name="railway"
+  # Railway publishes aarch64 builds only as a musl static tarball, and the
+  # file name embeds the tag (which already starts with "v"). The old
+  # "railway-${version}-aarch64-linux.tar.gz" never existed, so this path
+  # always 404'd and install fell through to proot or to a broken npm result.
+  local asset="railway-${latest_version}-aarch64-unknown-linux-musl.tar.gz"
+  local tarball_url="https://github.com/railwayapp/cli/releases/download/${latest_version}/${asset}"
 
   log_info "Downloading Railway ${version} for ARM64 Linux..."
   if ! curl -fsSL --connect-timeout 15 "$tarball_url" -o "$RAILWAY_DATA_DIR/railway.tar.gz" 2>>"$LOG_FILE"; then
-    log_warn "ARM64 binary not available. Railway CLI does not provide ARM Linux builds."
-    log_info "Use 'npx @railway/cli' instead."
+    log_warn "ARM64 Railway binary could not be downloaded from GitHub releases."
+    rm -f "$RAILWAY_DATA_DIR/railway.tar.gz"
     rmdir "$RAILWAY_DATA_DIR" 2>/dev/null || true
     return 2
   fi
 
   local expected
-  expected=$(github_release_asset_sha256 railwayapp/cli "$latest_version" "railway-${version}-aarch64-linux.tar.gz") || expected=""
+  expected=$(github_release_asset_sha256 railwayapp/cli "$latest_version" "$asset") || expected=""
   if [[ ! "$expected" =~ ^[0-9a-f]{64}$ ]]; then
     log_error "No published SHA-256 for Railway CLI; refusing install"
     rm -f "$RAILWAY_DATA_DIR/railway.tar.gz"
@@ -157,7 +168,10 @@ install_railway() {
       log_info "Railway CLI is already installed"
       return 2
     fi
-    if _railway_proot_wrapper_owned || [ -f "$_RAILWAY_MARKER" ]; then
+    # Present but unusable (the classic npm-without-postinstall symlink).
+    # It is ours if the npm tree or our marker says so; clear it so the install
+    # below can replace it instead of failing on a command nobody can run.
+    if _railway_proot_wrapper_owned || _railway_command_is_karnel_owned || [ -f "$_RAILWAY_MARKER" ] || [ -e "$PREFIX/lib/node_modules/@railway/cli" ]; then
       rm -f "$PREFIX/bin/railway"
     else
       log_error "Existing railway command is not usable or managed by Karnel"
@@ -169,10 +183,25 @@ install_railway() {
 
   mkdir -p "$(dirname "$LOG_FILE")" "$RAILWAY_DATA_DIR"
 
+  # npm exits 0 here even though it never produced a runnable command: the
+  # package's postinstall downloads the real binary, and Karnel's npm policy
+  # blocks install scripts. Treat npm's exit code as a hint, not as success -
+  # only a working "railway --version" counts.
   if karnel_npm install -g @railway/cli --legacy-peer-deps &>>"$LOG_FILE"; then
     command -v termux-fix-shebang &>/dev/null && termux-fix-shebang "$(command -v railway 2>/dev/null)" &>/dev/null
-    _railway_mark_install || return 1
-    log_success "Railway CLI installed via npm"
+    if railway --version &>/dev/null; then
+      _railway_mark_install || return 1
+      log_success "Railway CLI installed via npm"
+      return 0
+    fi
+    log_warn "@railway/cli installed without a runnable binary (its postinstall is blocked); fetching the native ARM64 build instead"
+    rm -f "$PREFIX/bin/railway"
+  fi
+
+  local manual_rc=0
+  _install_railway_manual || manual_rc=$?
+  if (( manual_rc == 0 )); then
+    log_success "Railway CLI installed from the official ARM64 release"
     return 0
   fi
 

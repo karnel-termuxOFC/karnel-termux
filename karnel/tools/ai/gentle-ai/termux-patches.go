@@ -107,6 +107,26 @@ func patchDetectGo(src string) (string, error) {
 	}
 
 	// 1b. resolvePlatformProfile: add case "android" before default.
+	// Upstream renamed detectLinuxDistro to osReleaseID, and the injected call
+	// is the one thing that decides whether the tree still compiles. Look up
+	// whichever helper this checkout actually defines; when it defines neither,
+	// keep the android case free of a distro lookup rather than emit a call to
+	// a function that is not there.
+	distroHelper := ""
+	switch {
+	case strings.Contains(src, "func osReleaseID("):
+		distroHelper = "osReleaseID"
+	case strings.Contains(src, "func detectLinuxDistro("):
+		distroHelper = "detectLinuxDistro"
+	}
+	distroBlock := ""
+	if distroHelper != "" {
+		distroBlock = tab(2) + `distro := ` + distroHelper + `(linuxOSRelease)` + "\n" +
+			tab(2) + `if distro != LinuxDistroUnknown {` + "\n" +
+			tab(3) + `profile.LinuxDistro = distro` + "\n" +
+			tab(2) + `}` + "\n"
+	}
+
 	old2 := "" +
 		tab(1) + `case "windows":` + "\n" +
 		tab(2) + `profile.PackageManager = "winget"` + "\n" +
@@ -121,10 +141,7 @@ func patchDetectGo(src string) (string, error) {
 		tab(1) + `case "android":` + "\n" +
 		tab(2) + `profile.PackageManager = "pkg"` + "\n" +
 		tab(2) + `profile.Supported = true` + "\n" +
-		tab(2) + `distro := detectLinuxDistro(linuxOSRelease)` + "\n" +
-		tab(2) + `if distro != LinuxDistroUnknown {` + "\n" +
-		tab(3) + `profile.LinuxDistro = distro` + "\n" +
-		tab(2) + `}` + "\n" +
+		distroBlock +
 		tab(2) + `return profile` + "\n" +
 		tab(1) + `default:`
 	src, err = assertReplace(src, old2, new2, "resolvePlatformProfile android case")

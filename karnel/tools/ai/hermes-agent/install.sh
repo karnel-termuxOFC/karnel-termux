@@ -40,16 +40,40 @@ _patch_psutil_for_termux() {
   "$HERMES_VENV/bin/python" -c "import psutil; print(psutil.__version__)" 2>/dev/null && return 0
   local tmp
   tmp=$(mktemp -d "$KARNEL_CACHE/psutil_patch.XXXXXX") || return 1
-  "$HERMES_VENV/bin/python" -m pip download psutil==7.2.2 --no-binary :all: --no-deps -d "$tmp" 2>/dev/null || { rm -rf "$tmp"; return 1; }
-  safe_extract_tar "$tmp/psutil-7.2.2.tar.gz" "$tmp" || { rm -rf "$tmp"; return 1; }
+
+  # Fetch the sdist straight from PyPI instead of letting pip "download" it.
+  # pip download has to build the package metadata first, and psutil's setup.py
+  # exits on sys.platform == "android" before a single byte is written, so the
+  # android fix below would never get a chance to run. The sdist URL and its
+  # SHA-256 both come from PyPI's own metadata, so the download stays pinned.
+  local meta sdist_url sdist_sha sdist_tar
+  meta=$(curl -fsSL --connect-timeout 20 "https://pypi.org/pypi/psutil/7.2.2/json") || { rm -rf "$tmp"; return 1; }
+  sdist_url=$(printf '%s' "$meta" | jq -r '.urls[] | select(.packagetype=="sdist") | .url' | head -1)
+  sdist_sha=$(printf '%s' "$meta" | jq -r '.urls[] | select(.packagetype=="sdist") | .digests.sha256' | head -1)
+  if [[ ! $sdist_url =~ ^https://files\.pythonhosted\.org/ ]]; then
+    log_error "psutil 7.2.2 sdist is missing from PyPI metadata"
+    rm -rf "$tmp"
+    return 1
+  fi
+  sdist_tar="$tmp/psutil-7.2.2.tar.gz"
+  curl -fsSL --connect-timeout 20 -o "$sdist_tar" "$sdist_url" || { rm -rf "$tmp"; return 1; }
+  verify_sha256 "$sdist_tar" "$sdist_sha" || { rm -rf "$tmp"; return 1; }
+
+  safe_extract_tar "$sdist_tar" "$tmp" || { rm -rf "$tmp"; return 1; }
   sed -i 's/LINUX = sys.platform.startswith("linux")/LINUX = sys.platform.startswith(("linux", "android"))/' "$tmp/psutil-7.2.2/psutil/_common.py" || { rm -rf "$tmp"; return 1; }
-  "$HERMES_VENV/bin/python" -m pip install "$tmp/psutil-7.2.2" || { rm -rf "$tmp"; return 1; }
+  # --no-build-isolation: an isolated build runs in a throwaway environment
+  # that inherits this Termux platform, so psutil's setup.py would refuse it
+  # again. Building against the venv keeps the patched source in play.
+  "$HERMES_VENV/bin/python" -m pip install --no-build-isolation "$tmp/psutil-7.2.2" || { rm -rf "$tmp"; return 1; }
   rm -rf "$tmp"
 }
 
 _prebuild_c_exts() {
-  for pkg in ruamel.yaml.clib uvloop tornado; do
-    "$HERMES_VENV/bin/python" -m pip install "$pkg" 2>/dev/null || return 1
+  # pybind11 is imported by the build of uvloop/tornado but is not declared as
+  # a build requirement, so metadata generation dies on a bare venv. Put it in
+  # place first.
+  for pkg in pybind11 ruamel.yaml.clib uvloop tornado; do
+    "$HERMES_VENV/bin/python" -m pip install "$pkg" 2>>"$LOG_FILE" || return 1
   done
 }
 
@@ -88,9 +112,30 @@ _install_hermes_agent_impl() {
 
   _hermes_relax_python_requirement || return 1
   [[ -x "$HERMES_VENV/bin/python" ]] || python3 -m venv "$HERMES_VENV" || return 1
+  # A 3.12+ venv ships pip but not setuptools, and every --no-build-isolation
+  # install below needs setuptools.build_meta to be importable inside it.
+  # maturin is needed because openai pulls in jiter, a Rust extension with no
+  # Android wheel; without it, metadata generation dies on "Cannot import
+  # 'maturin'". Exposing the venv's bin on PATH matters too: maturin's Python
+  # shim shells out to the maturin binary by name.
+  export PATH="$HERMES_VENV/bin:$PATH"
+  "$HERMES_VENV/bin/python" -m pip install --quiet --upgrade setuptools wheel 2>>"$LOG_FILE" || return 1
+  "$HERMES_VENV/bin/python" -m pip install --quiet maturin 2>>"$LOG_FILE" || return 1
   _patch_psutil_for_termux || return 1
   _prebuild_c_exts || return 1
-  "$HERMES_VENV/bin/python" -m pip install --no-build-isolation "$HERMES_DIR" || return 1
+  # Editable, not a built wheel: upstream refuses to produce one on purpose
+  # ("Building wheels or sdists for hermes-agent is not supported") and points
+  # at an editable install instead. Building from source is what failed here.
+  "$HERMES_VENV/bin/python" -m pip install --no-build-isolation -e "$HERMES_DIR" || return 1
+
+  # cryptography 50.0.0 builds here but its extension cannot be dlopened on
+  # Android ("cannot locate symbol PyModule_Type") - it breaks every
+  # `import cryptography` on the device, not just ours, and Hermes needs it for
+  # its secret sources. 44.0.3 builds and imports cleanly, and nothing in
+  # Hermes requires the newer major.
+  if ! "$HERMES_VENV/bin/python" -c "import cryptography.hazmat.primitives.hashes" &>/dev/null; then
+    "$HERMES_VENV/bin/python" -m pip install --no-build-isolation --force-reinstall "cryptography==44.0.3" 2>>"$LOG_FILE" || return 1
+  fi
 
   printf '%s\n' "#!$HERMES_VENV/bin/python" 'from hermes_cli.main import main' 'main()' >"$HERMES_LAUNCHER" || return 1
   chmod +x "$HERMES_LAUNCHER" || return 1
@@ -158,7 +203,10 @@ _update_hermes_agent_impl() {
   _hermes_owned || { log_error "Hermes Agent is not installed by Karnel"; return 1; }
   install_pinned_git_repo "$HERMES_REPO" "$HERMES_COMMIT" "$HERMES_DIR" || return 1
   _hermes_relax_python_requirement || return 1
-  "$HERMES_VENV/bin/python" -m pip install --no-build-isolation "$HERMES_DIR"
+  # Same two constraints as the install path: editable because upstream
+  # forbids building a wheel, and the venv on PATH so maturin can be found.
+  export PATH="$HERMES_VENV/bin:$PATH"
+  "$HERMES_VENV/bin/python" -m pip install --no-build-isolation -e "$HERMES_DIR"
 }
 
 reinstall_hermes_agent() {

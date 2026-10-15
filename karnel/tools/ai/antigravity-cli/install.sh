@@ -69,10 +69,11 @@ _antigravity_download_binary_impl() {
     log_error "Failed to fetch Antigravity CLI manifest"
     return 1
   }
-  local latest_version download_url manifest_sha256
+  local latest_version download_url manifest_sha256 manifest_sha512
   latest_version=$(printf '%s' "$manifest" | jq -r .version)
   download_url=$(printf '%s' "$manifest" | jq -r .url)
   manifest_sha256=$(printf '%s' "$manifest" | jq -r '.sha256 // empty')
+  manifest_sha512=$(printf '%s' "$manifest" | jq -r '.sha512 // empty')
   if [ -z "$latest_version" ] || [ -z "$download_url" ]; then
     log_error "Failed to parse Antigravity CLI manifest"
     return 1
@@ -87,10 +88,16 @@ _antigravity_download_binary_impl() {
     return 1
   fi
 
+  # The published manifest carries a SHA-512 and no SHA-256. Either digest
+  # proves the archive is the one the vendor published, so refuse only when it
+  # publishes neither - refusing the stronger digest just because the weaker
+  # one is absent leaves the tool uninstallable for no security gain.
   if [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]; then
     verify_sha256 "$tarball" "$manifest_sha256" || { rm -f "$tarball"; return 1; }
+  elif [[ "$manifest_sha512" =~ ^[0-9a-f]{128}$ ]]; then
+    verify_sha512 "$tarball" "$manifest_sha512" || { rm -f "$tarball"; return 1; }
   else
-    log_error "Antigravity CLI manifest does not publish a SHA-256; refusing install"
+    log_error "Antigravity CLI manifest publishes neither SHA-256 nor SHA-512; refusing install"
     rm -f "$tarball"
     return 1
   fi

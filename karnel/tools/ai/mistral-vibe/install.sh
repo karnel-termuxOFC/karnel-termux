@@ -49,7 +49,10 @@ _install_mistral_vibe_pip_impl() {
   export ANDROID_API_LEVEL=24
   export GYP_DEFINES="android_ndk_path=''"
 
-  if ! pip install mistral-vibe &>>"$LOG_FILE"; then
+  # Building cffi, cryptography, tree-sitter and friends from source takes far
+  # longer than a phone has patience for and is not needed: PyPI already ships
+  # wheels for every one of them that this install pulls in.
+  if ! pip install --prefer-binary mistral-vibe &>>"$LOG_FILE"; then
     log_error "Failed to install Mistral Vibe"
     return 1
   fi

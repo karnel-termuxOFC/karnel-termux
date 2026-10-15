@@ -126,6 +126,15 @@ _build_and_apply_patches_impl() {
 
   pushd "$GENTLE_AI_DATA_DIR" &>/dev/null || return 1
 
+  # The patcher matches exact upstream text, so it only works against a
+  # pristine checkout. Re-run it after a half-finished install and it would
+  # meet its own previous output (or a previous version's output) and report
+  # "pattern not found". Put the pinned commit back first: that repairs a tree
+  # an older patcher already broke, and makes re-patching idempotent.
+  if [[ -d .git ]]; then
+    git restore . 2>/dev/null || git checkout -- . 2>/dev/null || true
+  fi
+
   local patch_out patch_rc
   patch_out=$("$patcher_bin" "$GENTLE_AI_DATA_DIR" 2>&1)
   patch_rc=$?

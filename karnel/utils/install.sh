@@ -74,6 +74,20 @@ verify_sha256() {
   fi
 }
 
+verify_sha512() {
+  local file="$1" expected="$2" actual
+  [[ "$expected" =~ ^[0-9a-f]{128}$ ]] || {
+    log_error "Refusing invalid SHA-512 for $(basename "$file")"
+    return 1
+  }
+  actual=$(sha512sum "$file" 2>>"$LOG_FILE") || return 1
+  actual=${actual%% *}
+  if [[ "$actual" != "$expected" ]]; then
+    log_error "Checksum verification failed for $(basename "$file")"
+    return 1
+  fi
+}
+
 _archive_member_is_safe() {
   local member="$1"
   [[ -n "$member" && "$member" != /* && "$member" != *\\* ]] || return 1

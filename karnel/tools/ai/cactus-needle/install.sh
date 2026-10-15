@@ -74,7 +74,25 @@ _cactus_install_pip_glibc() {
   loading "Installing Cactus Needle (pip)" _cactus_install_pip_glibc_impl "$@"
 }
 
+# cactus-needle imports jax at runtime, and jax needs jaxlib. PyPI publishes
+# no jaxlib distribution for this platform at all, so the package can install
+# cleanly and then die on first run. Refuse up front with the real reason
+# instead of leaving a command behind that cannot work.
+_cactus_check_jax_available() {
+  # The native method imports jax through the glibc interpreter. Ask that same
+  # interpreter, rather than guessing from the platform, whether jaxlib is
+  # actually reachable before pulling a large package that cannot run.
+  # glibc-runner -s re-splits arguments, so feed the probe through stdin.
+  if { printf 'import jax\n' | timeout 120 glibc-runner -s "$CACTUS_GLIBC_PYTHON" -; } >/dev/null 2>&1; then
+    return 0
+  fi
+  log_error "Cactus Needle needs jax/jaxlib, and this device cannot load XLA (PyPI publishes no jaxlib for Android aarch64). The native install cannot work here; run 'karnel install ai --cactus-needle' again and choose the proot method instead."
+  return 1
+}
+
 _cactus_install_pip_glibc_impl() {
+  _cactus_check_jax_available || return 1
+
   # NOTE: never run "pip install --upgrade pip" inside the termux glibc
   # environment: python-pip-glibc ships a pip.conf that forbids it to
   # protect its bundled pip ("Installing pip is forbidden" error).
@@ -100,7 +118,7 @@ _cactus_verify_impl() {
   # spaces break; feed the check through stdin instead ("python -").
   # timeout cannot exec a bash function, so call the real binary here.
   if ! { printf 'import jax, needle\n' | timeout 300 glibc-runner -s "$CACTUS_GLIBC_PYTHON" -; } &>>"$LOG_FILE"; then
-    log_error "Cactus Needle installed but jax/jaxlib failed to load — your Android kernel or glibc setup cannot run XLA; use method 2 or 3"
+    log_error "Cactus Needle needs jax/jaxlib, and this device cannot load XLA. The native install cannot work here; run 'karnel install ai --cactus-needle' again and choose the proot method instead."
     rm -f "$PREFIX/bin/needle"
     _cactus_glibc_run -m pip uninstall -y cactus-needle &>>"$LOG_FILE"
     return 1

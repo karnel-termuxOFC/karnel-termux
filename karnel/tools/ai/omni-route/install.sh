@@ -12,6 +12,7 @@ OMNI_ROUTE_DATA_DIR="$KARNEL_DATA/omni-route"
 OMNI_ROUTE_PKG="$OMNI_ROUTE_DATA_DIR/packages/omniroute"
 OMNI_ROUTE_MARKER=".karnel-managed"
 OMNI_ROUTE_LOCAL_BIN="$OMNI_ROUTE_PKG/node_modules/omniroute/bin/omniroute.mjs"
+OMNI_ROUTE_PRELOAD="$OMNI_ROUTE_DATA_DIR/android-as-linux.cjs"
 
 _omni_route_data_owned() {
   [[ -f "$OMNI_ROUTE_DATA_DIR/$OMNI_ROUTE_MARKER" ]]
@@ -33,6 +34,16 @@ _omni_route_verify_ownership() {
   fi
 }
 
+_omni_route_install_preload() {
+  mkdir -p "$OMNI_ROUTE_DATA_DIR" || return 1
+  cat > "$OMNI_ROUTE_PRELOAD" <<'PRELOAD'
+// Termux: let the android-only platform value reach the few probes that must
+// not see it. Everything that genuinely cares about android keeps working,
+// because only process.platform is overridden, not the kernel or the ABI.
+Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+PRELOAD
+}
+
 _omni_route_install_wrapper() {
   local cmd="$1" wrapper="$PREFIX/bin/$1"
   if [[ -e "$wrapper" ]] && ! _omni_route_wrapper_is_karnel_owned "$wrapper"; then
@@ -45,6 +56,11 @@ _omni_route_install_wrapper() {
   cat > "$temporary" <<WRAPPER
 #!$PREFIX/bin/env bash
 # Karnel-managed omniRoute wrapper
+# Next.js probes process.platform to pick its cache directory and reports
+# "Unsupported platform: android" on Termux. OmniRoute then reads that line as
+# a fatal instrumentation failure and exits even though the server came up.
+# The preload presents linux to that probe only; nothing else is patched.
+export NODE_OPTIONS="--require $OMNI_ROUTE_PRELOAD \${NODE_OPTIONS:+ \$NODE_OPTIONS}"
 exec node "$OMNI_ROUTE_LOCAL_BIN" "\$@"
 WRAPPER
   chmod +x "$temporary" || { rm -f "$temporary"; return 1; }
@@ -103,6 +119,7 @@ _omni_route_apply_platform_fixes() {
 }
 
 _omni_route_wrap_and_fix() {
+  _omni_route_install_preload || true
   for cmd in omniroute omni-route; do
     _omni_route_install_wrapper "$cmd" || true
   done
@@ -114,6 +131,9 @@ _omni_route_wrap_and_fix() {
 install_omni_route() {
   if _omni_route_ok; then
     log_info "omniRoute already installed ($(omni-route --version 2>&1 | tail -1))"
+    # Re-write the wrappers: a fix that only lands in the first-install path
+    # never reaches anyone who installed before it existed.
+    _omni_route_wrap_and_fix
     _omni_route_apply_platform_fixes "$OMNI_ROUTE_PKG"
     return 2
   fi
