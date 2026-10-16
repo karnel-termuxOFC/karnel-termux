@@ -7,6 +7,8 @@ import "@/utils/version"
 
 install_supercode_cli() {
   if command -v supercode &>/dev/null; then
+    # Repairs an install made before the default-action patch existed.
+    _fix_supercode_default_action "$(command -v supercode)"
     log_info "Supercode CLI is already installed"
     return 2
   fi
@@ -28,6 +30,7 @@ install_supercode_cli() {
   fi
   _fix_npm_shebang "supercode-cli" || return 1
   _fix_supercode_shebang || return 1
+  _fix_supercode_default_action "$(command -v supercode)" || return 1
   log_success "Supercode CLI installed"
   return 0
 }
@@ -44,6 +47,43 @@ _fix_supercode_shebang() {
   else
     sed -i '1s|#!/usr/bin/env|#!/data/data/com.termux/files/usr/bin/env|' "$binary" || return 1
   fi
+}
+
+# `supercode` with no arguments only painted the welcome screen and then printed
+# commander's help, so the tool never looked interactive. The interactive
+# session is `supercode init` (which the welcome screen itself advertises as
+# "chat" — a command the CLI never registers). Point the default action at
+# wakeUpAction() so a bare `supercode` opens the session. Idempotent, and a
+# release that already does this — or whose layout we do not recognise — is
+# left alone.
+_SUPERCODE_OLD=$'    renderWelcome2(version);\n    program3.help();'
+_SUPERCODE_NEW='    await wakeUpAction();'
+
+_fix_supercode_default_action() {
+  local binary="$1" result
+  [[ -f "$binary" ]] || return 1
+  result=$(python3 - "$binary" "$_SUPERCODE_OLD" "$_SUPERCODE_NEW" <<'PY'
+import sys
+path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(path, "r", encoding="utf-8", errors="surrogateescape") as handle:
+    data = handle.read()
+if old in data:
+    with open(path, "w", encoding="utf-8", errors="surrogateescape") as handle:
+        handle.write(data.replace(old, new, 1))
+    print("patched")
+elif new in data:
+    print("already")
+else:
+    print("unknown")
+PY
+) || return 1
+  case "$result" in
+    patched | already) return 0 ;;
+    *)
+      log_warn "Supercode default action not recognised; bare 'supercode' may still print help"
+      return 0
+      ;;
+  esac
 }
 
 uninstall_supercode_cli() {
@@ -81,6 +121,7 @@ _do_update_supercode_cli() {
     return 1
   fi
   _fix_supercode_shebang || return 1
+  _fix_supercode_default_action "$(command -v supercode)" || return 1
   return 0
 }
 

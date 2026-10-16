@@ -103,6 +103,49 @@ _keelcode_get_integrity() {
     python3 -c "import json,sys; print(json.load(sys.stdin).get('dist',{}).get('integrity',''))" 2>/dev/null
 }
 
+# KeelCode 0.2.0 rejects the approval URL its own API returns: the device-code
+# endpoint answers with https://warm.run/device, while the binary's host
+# allowlist only admits keelcode.ai, so `keelcode login` dies with "returned an
+# invalid approval URL". Widen that allowlist to warm.run too. Both patterns are
+# the same byte length, so the binary's size is unchanged; a release that fixes
+# this upstream (or a layout we do not recognise) is left alone.
+_KEELCODE_WRE_OLD='function Wre(e){return e==="keelcode.ai"||e.endsWith(".keelcode.ai")}'
+_KEELCODE_WRE_NEW='function Wre(e){return /(^|\.)keelcode\.ai$|^warm\.run$/.test(e)}    '
+
+_keelcode_patch_approval_url() {
+  local binary="$1" result
+  [[ -f "$binary" ]] || return 1
+  result=$(python3 - "$binary" "$_KEELCODE_WRE_OLD" "$_KEELCODE_WRE_NEW" <<'PY'
+import sys
+path, old, new = sys.argv[1], sys.argv[2].encode(), sys.argv[3].encode()
+if len(new) > len(old):
+    print("reject")
+    sys.exit(0)
+with open(path, "rb") as handle:
+    data = handle.read()
+if new in data:
+    print("already")
+elif old in data:
+    with open(path, "wb") as handle:
+        handle.write(data.replace(old, new, 1))
+    print("patched")
+else:
+    print("unknown")
+PY
+) || return 1
+  case "$result" in
+    patched | already) return 0 ;;
+    reject)
+      log_error "KeelCode approval URL patch is larger than the code it replaces"
+      return 1
+      ;;
+    *)
+      log_warn "KeelCode approval URL allowlist not recognised; login may still fail"
+      return 0
+      ;;
+  esac
+}
+
 _keelcode_install_termux_wrapper() {
   local version staging archive native_dir wrapper expected actual
   version="$(karnel_npm view "$KEELCODE_PACKAGE" version 2>/dev/null)" || return 1
@@ -156,6 +199,12 @@ _keelcode_install_termux_wrapper() {
   rm -rf "$staging"
   : >"$KEELCODE_DATA_DIR/$KEELCODE_MARKER"
 
+  if ! _keelcode_patch_approval_url "$native_dir/bin/keelcode"; then
+    [ -d "$previous" ] && rm -rf "$native_dir" && mv "$previous" "$native_dir" 2>/dev/null || true
+    log_error "Failed to apply the KeelCode approval URL patch"
+    return 1
+  fi
+
   wrapper="$PREFIX/bin/keelcode"
   local temporary
   temporary="$(mktemp "$PREFIX/bin/.keelcode.XXXXXX")" || return 1
@@ -179,6 +228,8 @@ EOF
 
 install_keelcode() {
   if command -v keelcode &>/dev/null && keelcode --version >/dev/null 2>&1 && _keelcode_wrapper_owned; then
+    # Repairs an install made before the approval URL patch existed.
+    _keelcode_patch_approval_url "$KEELCODE_DATA_DIR/native/bin/keelcode"
     log_info "KeelCode is already installed"
     return 2
   fi

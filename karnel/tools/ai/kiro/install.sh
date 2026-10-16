@@ -86,21 +86,53 @@ _kiro_is_usable() {
   return 1
 }
 
+# The real binary always lives at $KIRO_DATA_DIR/kiro-cli; $PREFIX/bin/kiro-cli
+# is this wrapper, and $PREFIX/bin/kiro is a symlink to it. Passing the runner
+# explicitly matters: on a fresh install the wrapper is written before
+# $KIRO_METHOD exists, so reading it here would silently drop glibc-runner.
 _kiro_create_wrapper() {
-  local real_bin="$1" wrapper="$2"
+  local real_bin="$1" wrapper="$2" use_glibc="${3:-}" runner=""
+  [[ -n "$use_glibc" ]] && runner="glibc-runner "
   mkdir -p "$PREFIX/bin" "$KIRO_DATA_DIR" || return 1
   local temporary
   temporary="$(mktemp "$PREFIX/bin/.kiro-cli.XXXXXX")" || return 1
   cat > "$temporary" << WRAPPER
 #!$PREFIX/bin/bash
 # Karnel-managed Kiro wrapper
-if [ -f "$KIRO_METHOD" ] && [ "\$(cat "$KIRO_METHOD")" = "glibc-runner" ]; then
-  exec glibc-runner "$real_bin" "\$@"
+# Browser OAuth redirects cannot be answered from a Termux session, so a bare
+# "kiro login" defaults to the OAuth device flow (what --use-device-flow is for).
+if [ "\$1" = "login" ]; then
+  shift
+  case " \$* " in
+    *" --use-device-flow "*) set -- login "\$@" ;;
+    *) set -- login --use-device-flow "\$@" ;;
+  esac
 fi
-exec "$real_bin" "\$@"
+exec $runner"$real_bin" "\$@"
 WRAPPER
   chmod +x "$temporary" || { rm -f "$temporary"; return 1; }
   mv -f "$temporary" "$wrapper" || return 1
+  return 0
+}
+
+# Older installs put the real binary straight at $PREFIX/bin/kiro-cli, which
+# left no room to inject --use-device-flow. Move it into the data dir and put a
+# wrapper in its place; an install that already has a wrapper is left alone.
+_kiro_migrate_to_wrapper() {
+  local src="$PREFIX/bin/kiro-cli" dst="$KIRO_DATA_DIR/kiro-cli" method
+  [[ -f "$src" ]] || return 0
+  head -c 2 "$src" 2>/dev/null | grep -q '#!' && return 0
+  [[ -f "$dst" ]] && return 0
+  mkdir -p "$KIRO_DATA_DIR" || return 1
+  method=$(cat "$KIRO_METHOD" 2>/dev/null)
+  mv -f "$src" "$dst" || return 1
+  if [[ "$method" == "glibc-runner" ]]; then
+    _kiro_create_wrapper "$dst" "$src" 1 || return 1
+  else
+    _kiro_create_wrapper "$dst" "$src" "" || return 1
+  fi
+  sha256sum "$src" >"$KIRO_MARKER" || return 1
+  hash -r
   return 0
 }
 
@@ -114,6 +146,7 @@ install_kiro() (
     if [[ "$force" == "force" ]]; then
       log_info "Updating Kiro CLI..."
     else
+      _kiro_migrate_to_wrapper || return 1
       log_info "Kiro is already installed"
       return 2
     fi
@@ -228,11 +261,13 @@ print(version, download, checksum, sep="\t")
           mv -f "$staged_bin" "$KIRO_DATA_DIR/kiro-cli" || return 1
           staged_bin=""
           mkdir -p "$PREFIX/bin" || return 1
-          _kiro_create_wrapper "$KIRO_DATA_DIR/kiro-cli" "$PREFIX/bin/kiro-cli" || return 1
+          _kiro_create_wrapper "$KIRO_DATA_DIR/kiro-cli" "$PREFIX/bin/kiro-cli" 1 || return 1
           printf 'glibc-runner' >"$KIRO_METHOD"
         else
-          mv -f "$staged_bin" "$PREFIX/bin/kiro-cli" || return 1
+          mkdir -p "$KIRO_DATA_DIR" || return 1
+          mv -f "$staged_bin" "$KIRO_DATA_DIR/kiro-cli" || return 1
           staged_bin=""
+          _kiro_create_wrapper "$KIRO_DATA_DIR/kiro-cli" "$PREFIX/bin/kiro-cli" "" || return 1
           printf 'native' >"$KIRO_METHOD"
         fi
         staged_link_dir=$(mktemp -d "$PREFIX/bin/.kiro-link.XXXXXX") || return 1
